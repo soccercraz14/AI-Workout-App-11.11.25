@@ -118,7 +118,7 @@ const ExerciseGalleryItem: React.FC<ExerciseGalleryItemProps> = ({ exercise, onD
 
 
   return (
-    <div className="bg-white rounded-lg shadow-lg overflow-hidden flex flex-col">
+    <div className="bg-gradient-to-br from-gray-900 to-black rounded-2xl overflow-hidden flex flex-col border border-gray-800 hover:border-gray-700 transition-all">
       <div className="w-full aspect-[9/16] bg-black flex items-center justify-center relative">
         {videoSrc ? (
           <video
@@ -136,33 +136,33 @@ const ExerciseGalleryItem: React.FC<ExerciseGalleryItemProps> = ({ exercise, onD
           </video>
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <p className="text-gray-400 text-sm">Loading video...</p>
+            <p className="text-gray-500 text-sm">Loading...</p>
           </div>
         )}
       </div>
-      <div className="p-4 flex-grow flex flex-col justify-between">
+      <div className="p-4 flex-grow flex flex-col justify-between bg-gradient-to-b from-gray-900/50 to-transparent">
         <div>
-            <h3 className="font-semibold text-primary-700 truncate" title={exercise.name}>{exercise.name}</h3>
-            <p className="text-xs text-gray-500 mt-1 h-8 overflow-hidden" title={exercise.description}>
+            <h3 className="font-bold text-white text-lg truncate" title={exercise.name}>{exercise.name}</h3>
+            <p className="text-sm text-gray-400 mt-2 line-clamp-2" title={exercise.description}>
                 {exercise.description}
             </p>
-            {isTipLoading && <div className="mt-2"><LoadingSpinner /></div>}
-            {tipError && <p className="mt-2 text-xs text-red-500">{tipError}</p>}
-            {tip && <p className="mt-2 text-xs text-indigo-600 bg-indigo-50 p-2 rounded-md italic">"{tip}"</p>}
+            {isTipLoading && <div className="mt-3"><LoadingSpinner /></div>}
+            {tipError && <p className="mt-2 text-xs text-red-400">{tipError}</p>}
+            {tip && <p className="mt-3 text-xs text-gray-300 bg-gray-800 p-3 rounded-xl italic border border-gray-700">"{tip}"</p>}
         </div>
-        <div className="flex justify-between items-center mt-3">
+        <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-800">
              <button
                 onClick={handleGetTip}
                 disabled={isTipLoading}
-                className="p-2 text-purple-500 hover:text-purple-700 hover:bg-purple-100 rounded-full transition-colors self-end disabled:opacity-50"
+                className="p-2.5 text-white bg-gray-800 hover:bg-gray-700 rounded-xl transition-all disabled:opacity-50"
                 aria-label={`Get a quick tip for ${exercise.name}`}
-                title={`Get a quick tip`}
+                title={`Get AI tip`}
             >
                 <SparklesIcon className="w-5 h-5" />
             </button>
             <button
               onClick={() => onDeleteExercise(exercise.id)}
-              className="p-2 text-red-500 hover:text-red-700 hover:bg-red-100 rounded-full transition-colors self-end"
+              className="p-2.5 text-red-400 bg-red-950/30 hover:bg-red-950/50 rounded-xl transition-all border border-red-900/30"
               aria-label={`Delete exercise: ${exercise.name}`}
               title={`Delete ${exercise.name}`}
             >
@@ -183,23 +183,29 @@ interface ExerciseGalleryProps {
 const ExerciseGallery: React.FC<ExerciseGalleryProps> = ({ exercises, onDeleteExercise }) => {
   if (exercises.length === 0) {
     return (
-      <div className="text-center py-12 px-6 bg-white rounded-xl shadow-xl">
-        <h2 className="text-2xl font-semibold text-gray-700 mb-3">Exercise Gallery</h2>
-        <p className="text-gray-500">No exercises found.</p>
-        <p className="text-sm text-gray-400 mt-1">Upload videos and use the AI analysis to populate your gallery!</p>
+      <div className="text-center py-16 px-6 bg-gradient-to-br from-gray-900 to-black rounded-3xl border border-gray-800">
+        <div className="text-6xl mb-4">📹</div>
+        <h2 className="text-2xl font-bold text-white mb-3">No Exercises Yet</h2>
+        <p className="text-gray-400">Upload workout videos above to build your library</p>
+        <p className="text-sm text-gray-500 mt-2">AI will analyze and extract exercises automatically</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-gray-50 p-4 sm:p-6 rounded-xl shadow-xl">
-      <h2 className="text-3xl font-bold text-gray-800 mb-6 text-center">Your Exercise Gallery</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-white">Your Library</h2>
+        <span className="text-sm text-gray-400 bg-gray-900 px-3 py-1.5 rounded-full border border-gray-800">
+          {exercises.length} {exercises.length === 1 ? 'Exercise' : 'Exercises'}
+        </span>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {exercises.map((exercise) => (
-          <ExerciseGalleryItem 
-            key={exercise.id} 
-            exercise={exercise} 
-            onDeleteExercise={onDeleteExercise} 
+          <ExerciseGalleryItem
+            key={exercise.id}
+            exercise={exercise}
+            onDeleteExercise={onDeleteExercise}
           />
         ))}
       </div>

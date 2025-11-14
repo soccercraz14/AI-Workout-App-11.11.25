@@ -55,7 +55,7 @@ const VideoUploadForm: React.FC<VideoUploadFormProps> = ({ onAnalyzeVideos, isLo
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     processFiles(event.target.files);
   };
-  
+
   const handleDrop = useCallback((event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     event.stopPropagation();
@@ -71,10 +71,10 @@ const VideoUploadForm: React.FC<VideoUploadFormProps> = ({ onAnalyzeVideos, isLo
     if (videos.length > 0) {
       const payload: VideoAnalysisPayload[] = videos.map(({ file }) => ({ file }));
       onAnalyzeVideos(payload, useAdvancedAnalysis);
-      setVideos([]); 
+      setVideos([]);
       setError(null);
       if (fileInputRef.current) {
-        fileInputRef.current.value = ""; 
+        fileInputRef.current.value = "";
       }
     } else {
       setError('Please select one or more video files first.');
@@ -84,25 +84,27 @@ const VideoUploadForm: React.FC<VideoUploadFormProps> = ({ onAnalyzeVideos, isLo
   const handleButtonClick = () => {
     fileInputRef.current?.click();
   };
-  
+
   const handleClearSelected = () => {
     setVideos([]);
     setError(null);
     if (fileInputRef.current) {
-        fileInputRef.current.value = ""; 
+        fileInputRef.current.value = "";
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="p-6 bg-white rounded-xl shadow-lg space-y-4 mb-8">
-      <h2 className="text-2xl font-semibold text-gray-800 flex items-center">
-        <VideoCameraIcon className="w-7 h-7 mr-3 text-primary-600" />
-        Upload Videos
-      </h2>
-      
+    <form onSubmit={handleSubmit} className="bg-gradient-to-br from-gray-900 to-black rounded-3xl p-6 space-y-6 border border-gray-800">
+      <div className="flex items-center space-x-3">
+        <div className="bg-gradient-to-br from-white to-gray-400 p-2.5 rounded-xl">
+          <VideoCameraIcon className="w-6 h-6 text-black" />
+        </div>
+        <h2 className="text-2xl font-bold text-white">Upload Videos</h2>
+      </div>
+
       {videos.length === 0 ? (
-        <div 
-          className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md cursor-pointer hover:border-primary-500 transition-colors"
+        <div
+          className="mt-1 flex justify-center px-6 py-12 border-2 border-gray-700 border-dashed rounded-2xl cursor-pointer hover:border-gray-600 hover:bg-gray-900/50 transition-all"
           onClick={handleButtonClick}
           onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
           onDrop={handleDrop}
@@ -110,60 +112,61 @@ const VideoUploadForm: React.FC<VideoUploadFormProps> = ({ onAnalyzeVideos, isLo
           tabIndex={0}
           aria-label="Video upload area, click or drag and drop files"
         >
-          <div className="space-y-1 text-center">
-            <ArrowUpTrayIcon className="mx-auto h-12 w-12 text-gray-400" />
-            <div className="flex text-sm text-gray-600">
-              <span className="relative bg-white rounded-md font-medium text-primary-600 hover:text-primary-500">
-                <span>Upload files</span>
-                <input id="file-upload" name="file-upload" type="file" className="sr-only" accept="video/*,.mp4,.mov,.webm,.mkv,.avi,.wmv" multiple onChange={handleFileChange} ref={fileInputRef} />
-              </span>
-              <p className="pl-1">or drag and drop</p>
+          <div className="space-y-3 text-center">
+            <ArrowUpTrayIcon className="mx-auto h-16 w-16 text-gray-600" />
+            <div className="text-gray-300">
+              <span className="font-semibold text-white">Click to upload</span>
+              <span className="text-gray-500"> or drag and drop</span>
             </div>
-            <p className="text-xs text-gray-500">MP4, MOV, AVI, WebM, etc. Max {MAX_FILE_SIZE_MB}MB each.</p>
+            <p className="text-sm text-gray-500">MP4, MOV, AVI, WebM • Max {MAX_FILE_SIZE_MB}MB each</p>
+            <input id="file-upload" name="file-upload" type="file" className="sr-only" accept="video/*,.mp4,.mov,.webm,.mkv,.avi,.wmv" multiple onChange={handleFileChange} ref={fileInputRef} />
           </div>
         </div>
       ) : (
         <div className="space-y-4">
-            <div className="space-y-2">
-                <h3 className="text-md font-semibold text-gray-700">Selected Files ({videos.length})</h3>
-                <div className="max-h-48 overflow-y-auto space-y-2 p-2 bg-gray-50 rounded-lg border">
-                    {videos.map(video => (
-                        <div key={video.id} className="flex items-center justify-between p-2 bg-white rounded-md shadow-sm">
-                            <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-gray-800 truncate" title={video.file.name}>
-                                    {video.file.name}
-                                </p>
-                                <p className="text-xs text-gray-500">
-                                    ({(video.file.size / 1024 / 1024).toFixed(2)} MB)
-                                </p>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => handleRemoveVideo(video.id)}
-                                className="ml-2 p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-100 rounded-full transition-colors"
-                                aria-label={`Remove ${video.file.name}`}
-                                title={`Remove ${video.file.name}`}
-                            >
-                                <TrashIcon className="w-5 h-5" />
-                            </button>
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-white">Selected Files</h3>
+              <span className="text-xs text-gray-400 bg-gray-800 px-2.5 py-1 rounded-full">
+                {videos.length} {videos.length === 1 ? 'video' : 'videos'}
+              </span>
+            </div>
+            <div className="max-h-48 overflow-y-auto space-y-2 p-3 bg-gray-950 rounded-xl border border-gray-800">
+                {videos.map(video => (
+                    <div key={video.id} className="flex items-center justify-between p-3 bg-gray-900 rounded-xl border border-gray-800 hover:border-gray-700 transition-all">
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-white truncate" title={video.file.name}>
+                                {video.file.name}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-0.5">
+                                {(video.file.size / 1024 / 1024).toFixed(2)} MB
+                            </p>
                         </div>
-                    ))}
-                </div>
+                        <button
+                            type="button"
+                            onClick={() => handleRemoveVideo(video.id)}
+                            className="ml-3 p-2 text-gray-400 hover:text-red-400 hover:bg-red-950/30 rounded-xl transition-all"
+                            aria-label={`Remove ${video.file.name}`}
+                            title={`Remove ${video.file.name}`}
+                        >
+                            <TrashIcon className="w-5 h-5" />
+                        </button>
+                    </div>
+                ))}
             </div>
             <button
                 type="button"
                 onClick={handleButtonClick}
-                className="w-full text-sm text-primary-600 hover:text-primary-800 py-2 border border-dashed border-gray-300 rounded-lg hover:border-primary-500 transition-colors">
-                + Add more videos...
+                className="w-full text-sm text-gray-400 hover:text-white py-3 border border-dashed border-gray-700 rounded-xl hover:border-gray-600 hover:bg-gray-900/50 transition-all font-medium">
+                + Add more videos
             </button>
         </div>
       )}
 
       {error && (
-        <p className="mt-2 text-sm text-red-600" role="alert">{error}</p>
+        <p className="text-sm text-red-400 bg-red-950/30 p-3 rounded-xl border border-red-900/30" role="alert">{error}</p>
       )}
-      
-      <div className="relative flex items-start">
+
+      <div className="relative flex items-start bg-gray-900/50 p-4 rounded-xl border border-gray-800">
         <div className="flex items-center h-5">
           <input
             id="advanced-analysis"
@@ -171,25 +174,25 @@ const VideoUploadForm: React.FC<VideoUploadFormProps> = ({ onAnalyzeVideos, isLo
             type="checkbox"
             checked={useAdvancedAnalysis}
             onChange={(e) => setUseAdvancedAnalysis(e.target.checked)}
-            className="focus:ring-primary-500 h-4 w-4 text-primary-600 border-gray-300 rounded"
+            className="w-4 h-4 text-white bg-gray-800 border-gray-700 rounded focus:ring-2 focus:ring-gray-600"
           />
         </div>
         <div className="ml-3 text-sm">
-          <label htmlFor="advanced-analysis" className="font-medium text-gray-700">
-            Use Advanced Analysis (Pro)
+          <label htmlFor="advanced-analysis" className="font-semibold text-white flex items-center">
+            Advanced Analysis <span className="ml-2 text-xs bg-gradient-to-r from-white to-gray-400 text-black px-2 py-0.5 rounded-full font-bold">PRO</span>
           </label>
-          <p className="text-gray-500">
-            Slower, but provides more detailed exercise descriptions and form tips.
+          <p className="text-gray-400 text-xs mt-1">
+            Slower, but provides more detailed descriptions and form tips
           </p>
         </div>
       </div>
 
       <div className="pt-2 space-y-3">
         {videos.length > 0 && (
-          <button 
-              type="button" 
+          <button
+              type="button"
               onClick={handleClearSelected}
-              className="w-full text-sm text-center text-red-500 hover:text-red-700"
+              className="w-full text-sm text-center text-red-400 hover:text-red-300 py-2"
           >
               Clear All ({videos.length})
           </button>
@@ -197,10 +200,10 @@ const VideoUploadForm: React.FC<VideoUploadFormProps> = ({ onAnalyzeVideos, isLo
         <button
           type="submit"
           disabled={videos.length === 0 || isLoading}
-          className="w-full flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-lg shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full flex items-center justify-center px-6 py-4 text-base font-bold rounded-2xl shadow-lg bg-gradient-to-r from-white to-gray-200 text-black hover:from-gray-100 hover:to-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black focus:ring-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <SparklesIcon className="w-5 h-5 mr-2" />
-          {isLoading ? `Analyzing ${videos.length} Video(s)...` : `Analyze ${videos.length > 0 ? videos.length : ''} Video(s)`}
+          {isLoading ? `Analyzing ${videos.length} Video${videos.length > 1 ? 's' : ''}...` : `Analyze ${videos.length > 0 ? videos.length : ''} Video${videos.length !== 1 ? 's' : ''}`}
         </button>
       </div>
     </form>
