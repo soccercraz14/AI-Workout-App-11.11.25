@@ -13,13 +13,13 @@ import InteractiveWorkout from './components/InteractiveWorkout';
 import DataBackupRestore from './components/DataBackupRestore';
 import { generateWorkoutPlanWithGemini, analyzeVideoAndExtractExercises } from './services/geminiService';
 import * as apiService from './services/apiService';
-import { SparklesIcon, VideoCameraIcon, ArrowRightOnRectangleIcon } from './components/icons';
+import { SparklesIcon, VideoCameraIcon, ArrowRightOnRectangleIcon, HomeIcon } from './components/icons';
 
 export interface VideoAnalysisPayload {
     file: File;
 }
 
-type AppView = 'library' | 'plans' | 'workout' | 'analyzing';
+type AppView = 'home' | 'library' | 'plans' | 'workout' | 'analyzing';
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -38,7 +38,7 @@ const App: React.FC = () => {
   const [isLoadingSavedPlans, setIsLoadingSavedPlans] = useState<boolean>(false);
   const [isSavingPlan, setIsSavingPlan] = useState<boolean>(false);
 
-  const [currentView, setCurrentView] = useState<AppView>('library');
+  const [currentView, setCurrentView] = useState<AppView>('home');
   const [isPlanOptionsVisible, setPlanOptionsVisible] = useState(false);
   const [activeWorkoutSession, setActiveWorkoutSession] = useState<WorkoutSession | null>(null);
   const [streamingPlanText, setStreamingPlanText] = useState<string | null>(null);
@@ -93,7 +93,7 @@ const App: React.FC = () => {
     setSavedPlanEntries([]);
     setWorkoutPlan(null);
     setActiveWorkoutSession(null);
-    setCurrentView('library');
+    setCurrentView('home');
     setSuccessMessage("You have been logged out.");
   };
 
@@ -203,7 +203,7 @@ const App: React.FC = () => {
 
     setStatusMessage(finalStatusMessage || null);
     setIsLoadingVideo(false);
-    setCurrentView('library');
+    setCurrentView('home');
   }, [handleVideoAnalyzed]);
 
   const handleGeneratePlan = useCallback(async (options: { goal: string, trainingDays: number, useProModel: boolean }) => {
@@ -322,10 +322,17 @@ const App: React.FC = () => {
       );
     }
 
-    if (currentView === 'library') {
+    if (currentView === 'home') {
       return (
         <div className="space-y-8 fade-in">
           <VideoUploadForm onAnalyzeVideos={handleAnalyzeVideos} isLoading={isLoadingVideo} />
+        </div>
+      );
+    }
+
+    if (currentView === 'library') {
+      return (
+        <div className="fade-in">
           <ExerciseGallery exercises={exercises} onDeleteExercise={handleDeleteExercise} />
         </div>
       );
@@ -405,16 +412,16 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-black font-sans text-white pb-24">
+    <div className="min-h-screen bg-black font-sans text-white pb-20">
       {/* Top Header */}
-      <header className="bg-gradient-to-b from-gray-950 to-black border-b border-gray-900 sticky top-0 z-40 backdrop-blur-xl bg-opacity-90">
+      <header className="bg-gradient-to-b from-gray-950 to-black border-b border-gray-900 sticky top-0 z-40 backdrop-blur-xl bg-opacity-90" style={{paddingTop: 'env(safe-area-inset-top)'}}>
         <nav className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex items-center justify-between h-14">
             <div className="flex items-center space-x-3">
               <div className="bg-gradient-to-br from-white to-gray-400 p-2 rounded-xl">
-                <SparklesIcon className="h-6 w-6 text-black" />
+                <SparklesIcon className="h-5 w-5 text-black" />
               </div>
-              <h1 className="text-xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+              <h1 className="text-lg font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
                 AI Workout
               </h1>
             </div>
@@ -456,21 +463,33 @@ const App: React.FC = () => {
 
       {/* Bottom Navigation */}
       {currentView !== 'workout' && (
-        <nav className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-black via-gray-950 to-transparent backdrop-blur-xl border-t border-gray-900 z-50">
-          <div className="max-w-7xl mx-auto px-6 py-3">
+        <nav className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-black via-gray-950 to-transparent backdrop-blur-xl border-t border-gray-900 z-50" style={{paddingBottom: 'env(safe-area-inset-bottom)'}}>
+          <div className="max-w-7xl mx-auto px-4 py-2">
             <div className="flex items-center justify-around">
               <button
+                onClick={() => setCurrentView('home')}
+                className={`flex flex-col items-center space-y-0.5 px-4 py-1.5 rounded-xl transition-all ${
+                  currentView === 'home'
+                    ? 'bg-white text-black'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                <HomeIcon className="w-5 h-5" />
+                <span className="text-[10px] font-semibold">Home</span>
+              </button>
+
+              <button
                 onClick={() => setCurrentView('library')}
-                className={`flex flex-col items-center space-y-1 px-6 py-2 rounded-2xl transition-all ${
+                className={`flex flex-col items-center space-y-0.5 px-4 py-1.5 rounded-xl transition-all ${
                   currentView === 'library'
                     ? 'bg-white text-black'
                     : 'text-gray-400 hover:text-white'
                 }`}
               >
-                <VideoCameraIcon className="w-6 h-6" />
-                <span className="text-xs font-semibold">Library</span>
+                <VideoCameraIcon className="w-5 h-5" />
+                <span className="text-[10px] font-semibold">Library</span>
                 {exercises.length > 0 && (
-                  <span className="text-[10px] bg-gray-800 text-white px-2 py-0.5 rounded-full">
+                  <span className="text-[8px] bg-gray-800 text-white px-1.5 py-0.5 rounded-full">
                     {exercises.length}
                   </span>
                 )}
@@ -478,16 +497,16 @@ const App: React.FC = () => {
 
               <button
                 onClick={() => setCurrentView('plans')}
-                className={`flex flex-col items-center space-y-1 px-6 py-2 rounded-2xl transition-all ${
+                className={`flex flex-col items-center space-y-0.5 px-4 py-1.5 rounded-xl transition-all ${
                   currentView === 'plans'
                     ? 'bg-white text-black'
                     : 'text-gray-400 hover:text-white'
                 }`}
               >
-                <SparklesIcon className="w-6 h-6" />
-                <span className="text-xs font-semibold">Plans</span>
+                <SparklesIcon className="w-5 h-5" />
+                <span className="text-[10px] font-semibold">Plans</span>
                 {savedPlanEntries.length > 0 && (
-                  <span className="text-[10px] bg-gray-800 text-white px-2 py-0.5 rounded-full">
+                  <span className="text-[8px] bg-gray-800 text-white px-1.5 py-0.5 rounded-full">
                     {savedPlanEntries.length}
                   </span>
                 )}
@@ -503,10 +522,10 @@ const App: React.FC = () => {
                       }
                     }
                   }}
-                  className="bg-gradient-to-r from-white to-gray-200 text-black font-bold px-8 py-3 rounded-2xl hover:from-gray-100 hover:to-gray-300 transition-all shadow-lg flex items-center space-x-2"
+                  className="bg-gradient-to-r from-white to-gray-200 text-black font-bold px-6 py-2 rounded-xl hover:from-gray-100 hover:to-gray-300 transition-all shadow-lg flex items-center space-x-1.5"
                 >
-                  <span className="text-2xl">💪</span>
-                  <span className="text-sm">Start</span>
+                  <span className="text-xl">💪</span>
+                  <span className="text-xs">Start</span>
                 </button>
               )}
             </div>

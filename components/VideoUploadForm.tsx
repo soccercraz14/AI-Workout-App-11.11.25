@@ -94,118 +94,83 @@ const VideoUploadForm: React.FC<VideoUploadFormProps> = ({ onAnalyzeVideos, isLo
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-gradient-to-br from-gray-900 to-black rounded-3xl p-6 space-y-6 border border-gray-800">
-      <div className="flex items-center space-x-3">
-        <div className="bg-gradient-to-br from-white to-gray-400 p-2.5 rounded-xl">
-          <VideoCameraIcon className="w-6 h-6 text-black" />
-        </div>
-        <h2 className="text-2xl font-bold text-white">Upload Videos</h2>
+    <form onSubmit={handleSubmit} className="bg-gradient-to-br from-gray-900 to-black rounded-2xl p-5 space-y-4 border border-gray-800">
+      <input id="file-upload" name="file-upload" type="file" className="sr-only" accept="video/*,.mp4,.mov,.webm,.mkv,.avi,.wmv" multiple onChange={handleFileChange} ref={fileInputRef} />
+
+      <div
+        className="w-full"
+        onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+        onDrop={handleDrop}
+      >
+        <button
+          type="button"
+          onClick={handleButtonClick}
+          className="w-full bg-gray-800 hover:bg-gray-700 text-white font-semibold py-3 px-4 rounded-xl transition-all flex items-center justify-center space-x-2 border border-gray-700"
+        >
+          <ArrowUpTrayIcon className="w-5 h-5" />
+          <span>Click to Upload Videos</span>
+        </button>
       </div>
 
-      {videos.length === 0 ? (
-        <div
-          className="mt-1 flex justify-center px-6 py-12 border-2 border-gray-700 border-dashed rounded-2xl cursor-pointer hover:border-gray-600 hover:bg-gray-900/50 transition-all"
-          onClick={handleButtonClick}
-          onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
-          onDrop={handleDrop}
-          role="button"
-          tabIndex={0}
-          aria-label="Video upload area, click or drag and drop files"
-        >
-          <div className="space-y-3 text-center">
-            <ArrowUpTrayIcon className="mx-auto h-16 w-16 text-gray-600" />
-            <div className="text-gray-300">
-              <span className="font-semibold text-white">Click to upload</span>
-              <span className="text-gray-500"> or drag and drop</span>
-            </div>
-            <p className="text-sm text-gray-500">MP4, MOV, AVI, WebM • Max {MAX_FILE_SIZE_MB}MB each</p>
-            <input id="file-upload" name="file-upload" type="file" className="sr-only" accept="video/*,.mp4,.mov,.webm,.mkv,.avi,.wmv" multiple onChange={handleFileChange} ref={fileInputRef} />
-          </div>
-        </div>
-      ) : (
-        <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-white">Selected Files</h3>
-              <span className="text-xs text-gray-400 bg-gray-800 px-2.5 py-1 rounded-full">
-                {videos.length} {videos.length === 1 ? 'video' : 'videos'}
-              </span>
-            </div>
-            <div className="max-h-48 overflow-y-auto space-y-2 p-3 bg-gray-950 rounded-xl border border-gray-800">
-                {videos.map(video => (
-                    <div key={video.id} className="flex items-center justify-between p-3 bg-gray-900 rounded-xl border border-gray-800 hover:border-gray-700 transition-all">
-                        <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-white truncate" title={video.file.name}>
-                                {video.file.name}
-                            </p>
-                            <p className="text-xs text-gray-500 mt-0.5">
-                                {(video.file.size / 1024 / 1024).toFixed(2)} MB
-                            </p>
-                        </div>
-                        <button
-                            type="button"
-                            onClick={() => handleRemoveVideo(video.id)}
-                            className="ml-3 p-2 text-gray-400 hover:text-red-400 hover:bg-red-950/30 rounded-xl transition-all"
-                            aria-label={`Remove ${video.file.name}`}
-                            title={`Remove ${video.file.name}`}
-                        >
-                            <TrashIcon className="w-5 h-5" />
-                        </button>
-                    </div>
-                ))}
-            </div>
+      {videos.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between px-1">
+            <span className="text-xs font-semibold text-white">Selected: {videos.length}</span>
             <button
-                type="button"
-                onClick={handleButtonClick}
-                className="w-full text-sm text-gray-400 hover:text-white py-3 border border-dashed border-gray-700 rounded-xl hover:border-gray-600 hover:bg-gray-900/50 transition-all font-medium">
-                + Add more videos
+              type="button"
+              onClick={handleClearSelected}
+              className="text-xs text-red-400 hover:text-red-300"
+            >
+              Clear All
             </button>
+          </div>
+          <div className="max-h-32 overflow-y-auto space-y-1.5">
+            {videos.map(video => (
+              <div key={video.id} className="flex items-center justify-between p-2 bg-gray-950 rounded-lg border border-gray-800">
+                <span className="text-xs text-white truncate flex-1" title={video.file.name}>
+                  {video.file.name}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleRemoveVideo(video.id)}
+                  className="ml-2 p-1 text-gray-500 hover:text-red-400 transition-all"
+                  aria-label={`Remove ${video.file.name}`}
+                >
+                  <TrashIcon className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
       {error && (
-        <p className="text-sm text-red-400 bg-red-950/30 p-3 rounded-xl border border-red-900/30" role="alert">{error}</p>
+        <p className="text-xs text-red-400 bg-red-950/30 p-2 rounded-lg border border-red-900/30" role="alert">{error}</p>
       )}
 
-      <div className="relative flex items-start bg-gray-900/50 p-4 rounded-xl border border-gray-800">
-        <div className="flex items-center h-5">
-          <input
-            id="advanced-analysis"
-            name="advanced-analysis"
-            type="checkbox"
-            checked={useAdvancedAnalysis}
-            onChange={(e) => setUseAdvancedAnalysis(e.target.checked)}
-            className="w-4 h-4 text-white bg-gray-800 border-gray-700 rounded focus:ring-2 focus:ring-gray-600"
-          />
-        </div>
-        <div className="ml-3 text-sm">
-          <label htmlFor="advanced-analysis" className="font-semibold text-white flex items-center">
-            Advanced Analysis <span className="ml-2 text-xs bg-gradient-to-r from-white to-gray-400 text-black px-2 py-0.5 rounded-full font-bold">PRO</span>
-          </label>
-          <p className="text-gray-400 text-xs mt-1">
-            Slower, but provides more detailed descriptions and form tips
-          </p>
-        </div>
+      <div className="flex items-center space-x-2 bg-gray-900/50 p-3 rounded-xl border border-gray-800">
+        <input
+          id="advanced-analysis"
+          name="advanced-analysis"
+          type="checkbox"
+          checked={useAdvancedAnalysis}
+          onChange={(e) => setUseAdvancedAnalysis(e.target.checked)}
+          className="w-4 h-4 text-white bg-gray-800 border-gray-700 rounded focus:ring-2 focus:ring-gray-600"
+        />
+        <label htmlFor="advanced-analysis" className="text-xs font-semibold text-white flex items-center">
+          Advanced Analysis
+          <span className="ml-1.5 text-[9px] bg-gradient-to-r from-white to-gray-400 text-black px-1.5 py-0.5 rounded-full font-bold">PRO</span>
+        </label>
       </div>
 
-      <div className="pt-2 space-y-3">
-        {videos.length > 0 && (
-          <button
-              type="button"
-              onClick={handleClearSelected}
-              className="w-full text-sm text-center text-red-400 hover:text-red-300 py-2"
-          >
-              Clear All ({videos.length})
-          </button>
-        )}
-        <button
-          type="submit"
-          disabled={videos.length === 0 || isLoading}
-          className="w-full flex items-center justify-center px-6 py-4 text-base font-bold rounded-2xl shadow-lg bg-gradient-to-r from-white to-gray-200 text-black hover:from-gray-100 hover:to-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black focus:ring-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <SparklesIcon className="w-5 h-5 mr-2" />
-          {isLoading ? `Analyzing ${videos.length} Video${videos.length > 1 ? 's' : ''}...` : `Analyze ${videos.length > 0 ? videos.length : ''} Video${videos.length !== 1 ? 's' : ''}`}
-        </button>
-      </div>
+      <button
+        type="submit"
+        disabled={videos.length === 0 || isLoading}
+        className="w-full flex items-center justify-center px-6 py-3 text-sm font-bold rounded-xl shadow-lg bg-gradient-to-r from-white to-gray-200 text-black hover:from-gray-100 hover:to-gray-300 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        <SparklesIcon className="w-5 h-5 mr-2" />
+        {isLoading ? `Analyzing...` : videos.length > 0 ? `Analyze ${videos.length} Video${videos.length > 1 ? 's' : ''}` : 'Analyze Videos'}
+      </button>
     </form>
   );
 };
