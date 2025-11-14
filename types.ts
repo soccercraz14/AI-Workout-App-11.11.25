@@ -5,11 +5,16 @@ export interface User {
 
 export interface Exercise {
   id: string;
-  name:string;
+  name: string;
   description: string;
-  videoStorageKey?: string; 
-  startTime?: number; 
-  endTime?: number;   
+  videoStorageKey?: string;
+  thumbnailStorageKey?: string; // Thumbnail for quick preview
+  startTime?: number;
+  endTime?: number;
+  muscleGroups?: string[]; // e.g., ["Chest", "Triceps"]
+  equipment?: string; // e.g., "Barbell", "Dumbbells", "Bodyweight"
+  difficulty?: 'Beginner' | 'Intermediate' | 'Advanced';
+  videoHash?: string; // Hash of video for AI cache lookup
 }
 
 export interface PlannedExercise {
@@ -61,4 +66,27 @@ export interface FullUserDataBackup {
   savedPlans: SavedWorkoutPlanEntry[];
   // Videos are stored as a record mapping the storage key to the base64 data and mime type.
   videos?: Record<string, { mimeType: string; data: string }>;
+}
+
+/**
+ * AI response cache entry
+ */
+export interface AICacheEntry {
+  videoHash: string;
+  analysisResult: any; // The parsed AI response
+  timestamp: string;
+  modelUsed: string; // 'pro' or 'flash'
+}
+
+/**
+ * Upload queue item for background processing
+ */
+export interface UploadQueueItem {
+  id: string;
+  file: File;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  progress: number; // 0-100
+  error?: string;
+  retryCount: number;
+  useProModel: boolean;
 }

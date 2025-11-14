@@ -1,6 +1,7 @@
 
 import { GoogleGenAI, GenerateContentResponse, Type, Chat } from "@google/genai";
 import { Exercise, WorkoutPlan } from '../types';
+import * as aiCache from './aiCache';
 
 const API_KEY = process.env.API_KEY;
 
@@ -44,15 +45,64 @@ const fileToGenerativePart = async (file: File) => {
 interface ExtractedExerciseData {
   name: string;
   description: string;
-  startTime?: number; 
-  endTime?: number;  
+  startTime?: number;
+  endTime?: number;
+  muscleGroups?: string[];
+  equipment?: string;
+  difficulty?: 'Beginner' | 'Intermediate' | 'Advanced';
+}
+
+/**
+ * Retry helper with exponential backoff
+ */
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  initialDelay: number = 2000
+): Promise<T> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error as Error;
+
+      // Don't retry on certain errors (client errors)
+      if (error instanceof Error) {
+        const errorMsg = error.message.toLowerCase();
+        if (errorMsg.includes('400') || errorMsg.includes('invalid file') || errorMsg.includes('malformed')) {
+          throw error; // Don't retry client errors
+        }
+      }
+
+      if (attempt < maxRetries) {
+        const delay = initialDelay * Math.pow(2, attempt);
+        console.log(`Attempt ${attempt + 1} failed, retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+
+  throw lastError || new Error('Max retries exceeded');
 }
 
 export const analyzeVideoAndExtractExercises = async (
   videoFile: File,
-  useProModel: boolean
+  useProModel: boolean,
+  videoHash?: string
 ): Promise<ExtractedExerciseData[]> => {
-  const ai = getGenAIInstance(); 
+  // Check cache first if videoHash is provided
+  if (videoHash) {
+    const modelUsed = useProModel ? 'pro' : 'flash';
+    const cached = aiCache.getCachedAnalysis(videoHash, modelUsed);
+    if (cached) {
+      console.log('Using cached analysis result');
+      return cached as ExtractedExerciseData[];
+    }
+  }
+
+  const ai = getGenAIInstance();
 
   if (!videoFile.type.startsWith('video/')) {
     throw new Error("Invalid file type. Please upload a video file.");
@@ -61,15 +111,27 @@ export const analyzeVideoAndExtractExercises = async (
   const videoPart = await fileToGenerativePart(videoFile);
   
   const textPart = {
-    text: useProModel 
+    text: useProModel
       ? `
 Analyze the provided video in detail to identify all distinct physical exercises being performed.
-For each exercise you find, determine its specific name, a detailed description of the movement including common mistakes to avoid, its start time, and its end time in seconds.
+For each exercise you find, determine:
+1. Its specific name
+2. A detailed description of the movement including common mistakes to avoid
+3. The primary muscle groups targeted (e.g., "Chest", "Triceps", "Shoulders")
+4. Equipment needed (e.g., "Barbell", "Dumbbells", "Bodyweight", "Resistance Bands")
+5. Difficulty level (Beginner, Intermediate, or Advanced)
+6. Start time and end time in seconds
 The output must be structured according to the JSON schema provided.
 If no exercises are identifiable, return an empty array.`
       : `
 Analyze the provided video to identify all distinct physical exercises being performed.
-For each exercise you find, determine its specific name, a brief description of the movement, its start time, and its end time in seconds.
+For each exercise you find, determine:
+1. Its specific name
+2. A brief description of the movement
+3. The primary muscle groups targeted
+4. Equipment needed
+5. Difficulty level
+6. Start time and end time in seconds
 The output must be structured according to the JSON schema provided.
 If no exercises are identifiable, return an empty array.`
   };
@@ -86,9 +148,24 @@ If no exercises are identifiable, return an empty array.`
         },
         description: {
           type: Type.STRING,
-          description: useProModel 
+          description: useProModel
             ? "A detailed description of how the exercise is performed, including common mistakes (max 250 characters)."
             : "A brief description of how the exercise is performed (max 150 characters)."
+        },
+        muscleGroups: {
+          type: Type.ARRAY,
+          description: "Primary muscle groups targeted by this exercise",
+          items: {
+            type: Type.STRING
+          }
+        },
+        equipment: {
+          type: Type.STRING,
+          description: "Equipment needed for this exercise (e.g., 'Barbell', 'Dumbbells', 'Bodyweight')"
+        },
+        difficulty: {
+          type: Type.STRING,
+          description: "Difficulty level: 'Beginner', 'Intermediate', or 'Advanced'"
         },
         startTime: {
           type: Type.NUMBER,
@@ -104,15 +181,21 @@ If no exercises are identifiable, return an empty array.`
   };
 
 
-  try {
+  // Wrap the API call in retry logic
+  const performAnalysis = async () => {
     const response: GenerateContentResponse = await ai.models.generateContent({
-        model: useProModel ? 'gemini-2.5-pro' : 'gemini-2.5-flash',
-        contents: { parts: [ textPart, videoPart ] },
-         config: {
-            responseMimeType: 'application/json',
-            responseSchema: exerciseSchema
-        }
+      model: useProModel ? 'gemini-2.5-pro' : 'gemini-2.5-flash',
+      contents: { parts: [textPart, videoPart] },
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: exerciseSchema
+      }
     });
+    return response;
+  };
+
+  try {
+    const response = await retryWithBackoff(performAnalysis, 3, 2000);
 
     const text = response.text.trim();
     
@@ -142,7 +225,7 @@ If no exercises are identifiable, return an empty array.`
     }
     
     if (exercisesArray) {
-      const isValid = exercisesArray.every(item => 
+      const isValid = exercisesArray.every(item =>
         item &&
         typeof item.name === 'string' &&
         typeof item.description === 'string' &&
@@ -150,7 +233,15 @@ If no exercises are identifiable, return an empty array.`
         typeof item.endTime === 'number'
       );
       if (isValid) {
-        return exercisesArray as ExtractedExerciseData[];
+        const result = exercisesArray as ExtractedExerciseData[];
+
+        // Cache the result if videoHash is provided
+        if (videoHash) {
+          const modelUsed = useProModel ? 'pro' : 'flash';
+          aiCache.cacheAnalysis(videoHash, result, modelUsed);
+        }
+
+        return result;
       }
     }
     

@@ -13,6 +13,8 @@ import InteractiveWorkout from './components/InteractiveWorkout';
 import DataBackupRestore from './components/DataBackupRestore';
 import { generateWorkoutPlanWithGemini, analyzeVideoAndExtractExercises } from './services/geminiService';
 import * as apiService from './services/apiService';
+import * as videoStorage from './services/videoStorage';
+import { generateVideoHash, generateThumbnail, compressVideo } from './services/videoUtils';
 import { SparklesIcon, VideoCameraIcon, ArrowRightOnRectangleIcon, HomeIcon } from './components/icons';
 
 export interface VideoAnalysisPayload {
@@ -161,10 +163,33 @@ const App: React.FC = () => {
 
     for (let i = 0; i < videosToAnalyze.length; i++) {
       const { file: videoFile } = videosToAnalyze[i];
-      setStatusMessage(`Analyzing video ${i + 1} of ${videosToAnalyze.length}: ${videoFile.name}`);
+      setStatusMessage(`Processing video ${i + 1} of ${videosToAnalyze.length}: ${videoFile.name}`);
+
       try {
-        const videoStorageKey = await apiService.saveVideoFile(videoFile);
-        const extractedData = await analyzeVideoAndExtractExercises(videoFile, useProModel);
+        // Generate video hash for caching
+        setStatusMessage(`Generating hash for ${videoFile.name}...`);
+        const videoHash = await generateVideoHash(videoFile);
+
+        // Compress video (optional, currently returns original if small enough)
+        setStatusMessage(`Preparing ${videoFile.name}...`);
+        const processedVideo = await compressVideo(videoFile);
+
+        // Save video to storage
+        const videoStorageKey = await apiService.saveVideoFile(processedVideo);
+
+        // Generate and save thumbnail
+        setStatusMessage(`Generating thumbnail for ${videoFile.name}...`);
+        try {
+          const thumbnail = await generateThumbnail(processedVideo);
+          await videoStorage.saveThumbnail(videoStorageKey, thumbnail);
+        } catch (thumbError) {
+          console.warn(`Failed to generate thumbnail for ${videoFile.name}:`, thumbError);
+          // Continue even if thumbnail fails
+        }
+
+        // Analyze video with AI (with caching and retry)
+        setStatusMessage(`Analyzing video ${i + 1} of ${videosToAnalyze.length}: ${videoFile.name}`);
+        const extractedData = await analyzeVideoAndExtractExercises(processedVideo, useProModel, videoHash);
 
         if (extractedData.length > 0) {
           const videoFileNameForId = videoFile.name.replace(/[^a-zA-Z0-9]/g, '') || 'video';
@@ -173,8 +198,13 @@ const App: React.FC = () => {
             name: data.name,
             description: data.description,
             videoStorageKey: videoStorageKey,
+            thumbnailStorageKey: videoStorageKey, // Use same key for thumbnail
             startTime: data.startTime,
             endTime: data.endTime,
+            muscleGroups: data.muscleGroups,
+            equipment: data.equipment,
+            difficulty: data.difficulty,
+            videoHash: videoHash,
           }));
           allNewlyExtractedExercises.push(...exercisesWithDetails);
         }
@@ -416,15 +446,7 @@ const App: React.FC = () => {
       {/* Top Header */}
       <header className="bg-gradient-to-b from-gray-950 to-black border-b border-gray-900 sticky top-0 z-40 backdrop-blur-xl bg-opacity-90" style={{paddingTop: 'env(safe-area-inset-top)'}}>
         <nav className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="flex items-center justify-between h-14">
-            <div className="flex items-center space-x-2 ml-16">
-              <div className="bg-gradient-to-br from-white to-gray-400 p-1.5 rounded-lg">
-                <SparklesIcon className="h-4 w-4 text-black" />
-              </div>
-              <h1 className="text-sm font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
-                AI Workout
-              </h1>
-            </div>
+          <div className="flex items-center justify-end h-14">
             <button
                 onClick={handleLogout}
                 className="p-2 text-gray-400 hover:text-white hover:bg-gray-900 rounded-xl transition-all"

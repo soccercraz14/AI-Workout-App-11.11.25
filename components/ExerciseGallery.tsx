@@ -1,5 +1,5 @@
 
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { Exercise } from '../types';
 import * as apiService from '../services/apiService';
 import * as videoStorage from '../services/videoStorage';
@@ -15,14 +15,42 @@ interface ExerciseGalleryItemProps {
 const ExerciseGalleryItem: React.FC<ExerciseGalleryItemProps> = ({ exercise, onDeleteExercise }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoSrc, setVideoSrc] = useState<string | null>(null);
+  const [thumbnailSrc, setThumbnailSrc] = useState<string | null>(null);
   const [isVideoLoading, setIsVideoLoading] = useState(true);
   const [videoError, setVideoError] = useState<string | null>(null);
+  const [showFullVideo, setShowFullVideo] = useState(false);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const [tip, setTip] = useState<string | null>(null);
   const [isTipLoading, setIsTipLoading] = useState(false);
   const [tipError, setTipError] = useState<string | null>(null);
 
+  // Load thumbnail first
   useEffect(() => {
+    const loadThumbnail = async () => {
+      if (exercise.thumbnailStorageKey) {
+        try {
+          const thumbPath = await videoStorage.getThumbnailPath(exercise.thumbnailStorageKey);
+          if (thumbPath) {
+            setThumbnailSrc(thumbPath);
+          } else {
+            // Fallback to blob for web
+            const thumbBlob = await videoStorage.getThumbnail(exercise.thumbnailStorageKey);
+            if (thumbBlob) {
+              setThumbnailSrc(URL.createObjectURL(thumbBlob));
+            }
+          }
+        } catch (error) {
+          console.error(`Failed to load thumbnail for ${exercise.name}:`, error);
+        }
+      }
+    };
+    loadThumbnail();
+  }, [exercise]);
+
+  // Load full video only when user clicks to play
+  useEffect(() => {
+    if (!showFullVideo) return;
+
     const loadVideo = async () => {
       if (exercise.videoStorageKey) {
         setIsVideoLoading(true);
@@ -79,7 +107,7 @@ const ExerciseGalleryItem: React.FC<ExerciseGalleryItemProps> = ({ exercise, onD
         observerRef.current.disconnect();
       }
     };
-  }, [exercise]);
+  }, [exercise, showFullVideo]);
 
   // Handle video time range (start/end time) after metadata loads
   useEffect(() => {
@@ -160,32 +188,57 @@ const ExerciseGalleryItem: React.FC<ExerciseGalleryItemProps> = ({ exercise, onD
             <p className="text-red-400 text-sm mb-2">⚠️ {videoError}</p>
             <p className="text-gray-500 text-xs">Try re-uploading the video</p>
           </div>
-        ) : isVideoLoading ? (
-          <div className="w-full h-full flex items-center justify-center">
-            <div className="text-center">
-              <LoadingSpinner />
-              <p className="text-gray-500 text-xs mt-2">Loading video...</p>
+        ) : !showFullVideo && thumbnailSrc ? (
+          /* Show thumbnail with play button */
+          <div className="w-full h-full relative cursor-pointer" onClick={() => setShowFullVideo(true)}>
+            <img
+              src={thumbnailSrc}
+              alt={exercise.name}
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center hover:bg-opacity-20 transition-all">
+              <div className="w-16 h-16 bg-white bg-opacity-90 rounded-full flex items-center justify-center">
+                <svg className="w-8 h-8 text-black ml-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
+                </svg>
+              </div>
             </div>
           </div>
-        ) : videoSrc ? (
-          <video
-            ref={videoRef}
-            key={videoSrc}
-            src={videoSrc}
-            className="w-full h-full object-contain"
-            controls
-            loop
-            muted
-            playsInline
-            preload="metadata"
-            onError={handleVideoError}
-            onLoadedData={() => console.log(`Video loaded successfully: ${exercise.name}`)}
-          >
-            Your browser does not support the video tag.
-          </video>
+        ) : showFullVideo ? (
+          /* Show full video after clicking play */
+          isVideoLoading ? (
+            <div className="w-full h-full flex items-center justify-center">
+              <div className="text-center">
+                <LoadingSpinner />
+                <p className="text-gray-500 text-xs mt-2">Loading video...</p>
+              </div>
+            </div>
+          ) : videoSrc ? (
+            <video
+              ref={videoRef}
+              key={videoSrc}
+              src={videoSrc}
+              className="w-full h-full object-contain"
+              controls
+              autoPlay
+              loop
+              muted
+              playsInline
+              preload="metadata"
+              onError={handleVideoError}
+              onLoadedData={() => console.log(`Video loaded successfully: ${exercise.name}`)}
+            >
+              Your browser does not support the video tag.
+            </video>
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <p className="text-gray-500 text-sm">No video available</p>
+            </div>
+          )
         ) : (
+          /* No thumbnail available */
           <div className="w-full h-full flex items-center justify-center">
-            <p className="text-gray-500 text-sm">No video available</p>
+            <LoadingSpinner />
           </div>
         )}
       </div>
@@ -195,6 +248,30 @@ const ExerciseGalleryItem: React.FC<ExerciseGalleryItemProps> = ({ exercise, onD
             <p className="text-sm text-gray-400 mt-2 line-clamp-2" title={exercise.description}>
                 {exercise.description}
             </p>
+
+            {/* Muscle Groups Tags */}
+            {exercise.muscleGroups && exercise.muscleGroups.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {exercise.muscleGroups.map((group, idx) => (
+                  <span
+                    key={idx}
+                    className="text-[10px] bg-gray-800 text-gray-300 px-2 py-0.5 rounded-full border border-gray-700"
+                  >
+                    {group}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Equipment Tag */}
+            {exercise.equipment && (
+              <div className="mt-1.5">
+                <span className="text-[10px] bg-gray-800 text-gray-400 px-2 py-0.5 rounded-full border border-gray-700">
+                  🏋️ {exercise.equipment}
+                </span>
+              </div>
+            )}
+
             {isTipLoading && <div className="mt-3"><LoadingSpinner /></div>}
             {tipError && <p className="mt-2 text-xs text-red-400">{tipError}</p>}
             {tip && <p className="mt-3 text-xs text-gray-300 bg-gray-800 p-3 rounded-xl italic border border-gray-700">"{tip}"</p>}
@@ -230,6 +307,29 @@ interface ExerciseGalleryProps {
 }
 
 const ExerciseGallery: React.FC<ExerciseGalleryProps> = ({ exercises, onDeleteExercise }) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedMuscleGroup, setSelectedMuscleGroup] = useState<string>('All');
+
+  // Get all unique muscle groups from exercises
+  const allMuscleGroups = useMemo(() => {
+    const groups = new Set<string>();
+    exercises.forEach(ex => {
+      ex.muscleGroups?.forEach(group => groups.add(group));
+    });
+    return ['All', ...Array.from(groups).sort()];
+  }, [exercises]);
+
+  // Filter exercises based on search and muscle group
+  const filteredExercises = useMemo(() => {
+    return exercises.filter(exercise => {
+      const matchesSearch = exercise.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          exercise.description.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesMuscleGroup = selectedMuscleGroup === 'All' ||
+                                exercise.muscleGroups?.includes(selectedMuscleGroup);
+      return matchesSearch && matchesMuscleGroup;
+    });
+  }, [exercises, searchQuery, selectedMuscleGroup]);
+
   if (exercises.length === 0) {
     return (
       <div className="text-center py-16 px-6 bg-gradient-to-br from-gray-900 to-black rounded-3xl border border-gray-800">
@@ -243,21 +343,58 @@ const ExerciseGallery: React.FC<ExerciseGalleryProps> = ({ exercises, onDeleteEx
 
   return (
     <div className="space-y-6">
+      {/* Header with count */}
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-white">Your Library</h2>
         <span className="text-sm text-gray-400 bg-gray-900 px-3 py-1.5 rounded-full border border-gray-800">
-          {exercises.length} {exercises.length === 1 ? 'Exercise' : 'Exercises'}
+          {filteredExercises.length} of {exercises.length} {exercises.length === 1 ? 'Exercise' : 'Exercises'}
         </span>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {exercises.map((exercise) => (
-          <ExerciseGalleryItem
-            key={exercise.id}
-            exercise={exercise}
-            onDeleteExercise={onDeleteExercise}
-          />
-        ))}
-      </div>
+
+      {/* Search Bar */}
+      <input
+        type="text"
+        placeholder="Search exercises..."
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        className="w-full bg-gray-900 text-white px-4 py-3 rounded-xl border border-gray-800 focus:border-white focus:outline-none transition-all placeholder-gray-500"
+      />
+
+      {/* Muscle Group Filter */}
+      {allMuscleGroups.length > 1 && (
+        <div className="flex flex-wrap gap-2">
+          {allMuscleGroups.map(group => (
+            <button
+              key={group}
+              onClick={() => setSelectedMuscleGroup(group)}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                selectedMuscleGroup === group
+                  ? 'bg-white text-black'
+                  : 'bg-gray-900 text-gray-400 hover:bg-gray-800 border border-gray-800'
+              }`}
+            >
+              {group}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Exercise Grid */}
+      {filteredExercises.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {filteredExercises.map((exercise) => (
+            <ExerciseGalleryItem
+              key={exercise.id}
+              exercise={exercise}
+              onDeleteExercise={onDeleteExercise}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-12 px-6 bg-gray-900 rounded-2xl border border-gray-800">
+          <p className="text-gray-400">No exercises match your search</p>
+        </div>
+      )}
     </div>
   );
 };
