@@ -15,9 +15,9 @@ interface WorkoutPlanDisplayProps {
 const PlanInfoSection: React.FC<{ title: string; content?: string }> = ({ title, content }) => {
   if (!content) return null;
   return (
-    <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-      <h4 className="font-semibold text-sm text-blue-700">{title}</h4>
-      <p className="text-xs text-blue-600 whitespace-pre-line">{content}</p>
+    <div className="mb-4 p-4 bg-gradient-to-br from-gray-900 to-black border border-gray-800 rounded-xl">
+      <h4 className="font-semibold text-sm text-white">{title}</h4>
+      <p className="text-xs text-gray-400 whitespace-pre-line mt-1">{content}</p>
     </div>
   );
 };
@@ -176,14 +176,14 @@ const WorkoutPlanDisplay: React.FC<WorkoutPlanDisplayProps> = ({ plan, exercises
   };
 
   return (
-    <div className="p-5 bg-white rounded-xl shadow-2xl relative">
-      <div className="flex flex-col sm:flex-row justify-between items-start mb-4 gap-2">
-        <h3 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-700">{plan.title}</h3>
+    <div className="p-6 bg-gradient-to-br from-gray-900 to-black rounded-3xl shadow-2xl relative border border-gray-800">
+      <div className="flex flex-col sm:flex-row justify-between items-start mb-6 gap-2">
+        <h3 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">{plan.title}</h3>
         <div className="flex space-x-2 self-start sm:self-center">
            <button
             onClick={handleCopyToClipboard}
             title="Copy plan as Markdown"
-            className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-100 rounded-full transition-colors"
+            className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-xl transition-all"
             aria-label="Copy plan as Markdown"
           >
             <ClipboardIcon className="w-5 h-5" />
@@ -191,7 +191,7 @@ const WorkoutPlanDisplay: React.FC<WorkoutPlanDisplayProps> = ({ plan, exercises
           <button
             onClick={handleDownloadMarkdown}
             title="Download plan as Markdown"
-            className="p-2 text-gray-500 hover:text-green-600 hover:bg-green-100 rounded-full transition-colors"
+            className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-xl transition-all"
             aria-label="Download plan as Markdown"
           >
             <ArrowDownTrayIcon className="w-5 h-5" />
@@ -201,7 +201,7 @@ const WorkoutPlanDisplay: React.FC<WorkoutPlanDisplayProps> = ({ plan, exercises
                 onClick={handleSavePlan}
                 disabled={isSavingPlan}
                 title="Save this workout plan"
-                className="p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-100 rounded-full transition-colors disabled:opacity-50"
+                className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-xl transition-all disabled:opacity-50"
                 aria-label="Save this workout plan"
             >
                 <SparklesIcon className={`w-5 h-5 ${isSavingPlan ? 'animate-pulse' : ''}`} />
@@ -211,7 +211,7 @@ const WorkoutPlanDisplay: React.FC<WorkoutPlanDisplayProps> = ({ plan, exercises
       </div>
 
       {copySuccessMessage && (
-        <div className="absolute top-0 right-0 mt-2 mr-2 p-2 text-xs bg-green-100 text-green-700 rounded shadow-md z-10">
+        <div className="absolute top-0 right-0 mt-2 mr-2 p-3 text-xs bg-green-950 text-green-200 rounded-xl shadow-md z-10 border border-green-900">
           {copySuccessMessage}
         </div>
       )}
@@ -219,19 +219,19 @@ const WorkoutPlanDisplay: React.FC<WorkoutPlanDisplayProps> = ({ plan, exercises
       <PlanInfoSection title="Trainer's Overview" content={plan.description} />
       <PlanInfoSection title="Weekly Split" content={plan.weeklySplitDescription} />
 
-      <div className="space-y-6">
+      <div className="space-y-4">
         {plan.weeklyPlan.map((day, dayIndex) => (
-          <div key={dayIndex} className="p-4 bg-gray-50 rounded-lg shadow">
-            <div className="flex justify-between items-start">
+          <div key={dayIndex} className="p-5 bg-gradient-to-br from-gray-950 to-black rounded-2xl shadow-lg border border-gray-800">
+            <div className="flex justify-between items-start mb-3">
                 <div>
-                    <h4 className="text-lg font-semibold text-gray-700">{day.day}</h4>
-                    {day.focus && <p className="text-sm text-indigo-600 font-medium mb-1">{day.focus}</p>}
+                    <h4 className="text-xl font-bold text-white">{day.day}</h4>
+                    {day.focus && <p className="text-sm text-gray-400 font-semibold mb-1">{day.focus}</p>}
                     {day.notes && <p className="text-xs text-gray-500 italic mb-2 whitespace-pre-line">{day.notes}</p>}
                 </div>
                 {day.exercises.length > 0 && plan && (
                      <button
                         onClick={() => onStartWorkout({ plan, day })}
-                        className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-white bg-green-500 rounded-lg shadow hover:bg-green-600 transition-all"
+                        className="flex items-center gap-2 px-4 py-2 text-sm font-bold bg-gradient-to-r from-white to-gray-200 text-black rounded-xl shadow-lg hover:from-gray-100 hover:to-gray-300 transition-all"
                         title={`Start ${day.day} workout`}
                     >
                         <PlayIcon className="w-4 h-4" />
@@ -259,13 +259,13 @@ const WorkoutPlanDisplay: React.FC<WorkoutPlanDisplayProps> = ({ plan, exercises
                   }
 
                   return (
-                    <li key={exIndex} className="p-3 bg-white rounded-md shadow-sm border border-gray-200">
+                    <li key={exIndex} className="p-4 bg-gray-900 rounded-xl shadow-sm border border-gray-800">
                       <div className="flex justify-between items-center">
-                        <strong className="text-md text-primary-700">{exercise.name}</strong>
+                        <strong className="text-md text-white font-semibold">{exercise.name}</strong>
                         {videoClipSrc && (
                            <button
                             onClick={() => {
-                              if (videoClipSrc) { 
+                              if (videoClipSrc) {
                                 let modalSrcWithFragment = videoClipSrc;
                                 if (startTime !== undefined) {
                                   modalSrcWithFragment += `#t=${startTime}`;
@@ -277,7 +277,7 @@ const WorkoutPlanDisplay: React.FC<WorkoutPlanDisplayProps> = ({ plan, exercises
                                 setCurrentVideoModalTitle(exercise.name);
                               }
                             }}
-                            className="ml-2 p-1 text-blue-500 hover:text-blue-700 hover:bg-blue-100 rounded-full transition-colors"
+                            className="ml-2 p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-xl transition-all"
                             title={`Play ${exercise.name} clip in modal${startTime !== undefined ? ` (starts at ${startTime}s)` : ''}`}
                             aria-label={`Play video clip for ${exercise.name} in modal`}
                           >
@@ -291,7 +291,7 @@ const WorkoutPlanDisplay: React.FC<WorkoutPlanDisplayProps> = ({ plan, exercises
                             key={inlineVideoSrcWithFragment}
                             src={inlineVideoSrcWithFragment}
                             controls
-                            className="w-full rounded-md mt-2"
+                            className="w-full rounded-xl mt-3 border border-gray-800"
                             style={{maxHeight: '200px'}}
                             preload="metadata"
                         >
@@ -299,10 +299,10 @@ const WorkoutPlanDisplay: React.FC<WorkoutPlanDisplayProps> = ({ plan, exercises
                         </video>
                       )}
 
-                      <div className="text-xs text-gray-600 mt-2 space-y-0.5">
-                        {exercise.sets && <span>Sets: {exercise.sets}</span>}
-                        {exercise.reps && <span className="ml-2">Reps: {exercise.reps}</span>}
-                        {exercise.rest && <span className="ml-2">Rest: {exercise.rest}</span>}
+                      <div className="text-xs text-gray-400 mt-3 flex gap-3">
+                        {exercise.sets && <span className="bg-gray-800 px-2 py-1 rounded-lg">Sets: {exercise.sets}</span>}
+                        {exercise.reps && <span className="bg-gray-800 px-2 py-1 rounded-lg">Reps: {exercise.reps}</span>}
+                        {exercise.rest && <span className="bg-gray-800 px-2 py-1 rounded-lg">Rest: {exercise.rest}</span>}
                       </div>
                       {/* PlannedExercise.description (Trainer Note) removed */}
                       {/* fullExercise.description (Original exercise description) removed from plan display */}
@@ -325,20 +325,20 @@ const WorkoutPlanDisplay: React.FC<WorkoutPlanDisplayProps> = ({ plan, exercises
 
       {currentVideoModalSrc && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4"
           aria-modal="true"
           role="dialog"
           onClick={handleCloseModal}
         >
           <div
-            className="bg-white p-4 sm:p-6 rounded-lg shadow-xl w-full max-w-2xl"
+            className="bg-gradient-to-br from-gray-900 to-black p-4 sm:p-6 rounded-2xl shadow-2xl w-full max-w-2xl border border-gray-800"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-center mb-3">
-              <h5 className="text-xl font-semibold text-primary-700">{currentVideoModalTitle || 'Video Clip'}</h5>
+              <h5 className="text-xl font-bold text-white">{currentVideoModalTitle || 'Video Clip'}</h5>
               <button
                 onClick={handleCloseModal}
-                className="p-1 text-gray-500 hover:text-gray-800 rounded-full hover:bg-gray-200"
+                className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-xl transition-all"
                 aria-label="Close video player"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
@@ -351,7 +351,7 @@ const WorkoutPlanDisplay: React.FC<WorkoutPlanDisplayProps> = ({ plan, exercises
               src={currentVideoModalSrc}
               controls
               autoPlay
-              className="w-full rounded"
+              className="w-full rounded-xl border border-gray-800"
               style={{maxHeight: '70vh'}}
             >
               Your browser does not support the video tag.
