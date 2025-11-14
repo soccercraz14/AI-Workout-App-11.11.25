@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import * as apiService from '../services/apiService';
 import { User } from '../types';
 import LoadingSpinner from './LoadingSpinner';
+import { SparklesIcon } from './icons';
 
 interface AuthProps {
   onLogin: (user: User) => void;
@@ -54,102 +55,103 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onSignup, setError }) => {
   };
 
   return (
-    <div className="max-w-md mx-auto mt-8">
-      <div className="bg-white shadow-2xl rounded-xl p-8">
-        <h2 className="text-3xl font-bold text-center text-primary-700 mb-2">
-          {mode === 'login' ? 'Welcome Back!' : 'Create Your Account'}
+    <div className="max-w-md mx-auto fade-in">
+      <div className="bg-gradient-to-br from-gray-900 to-black border border-gray-800 rounded-3xl p-8 shadow-2xl">
+        {/* Logo/Icon */}
+        <div className="flex justify-center mb-6">
+          <div className="bg-gradient-to-br from-white to-gray-400 p-4 rounded-2xl">
+            <SparklesIcon className="h-12 w-12 text-black" />
+          </div>
+        </div>
+
+        <h2 className="text-3xl font-bold text-center text-white mb-2">
+          {mode === 'login' ? 'Welcome Back' : 'Get Started'}
         </h2>
-        <p className="text-center text-gray-500 mb-6">
-          {mode === 'login' ? 'Log in to access your workout plans.' : 'Get started with your personalized AI coach.'}
+        <p className="text-center text-gray-400 mb-8">
+          {mode === 'login' ? 'Log in to access your workout plans' : 'Create your account to begin training'}
         </p>
+
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-              Email address
+            <label htmlFor="email" className="block text-sm font-semibold text-white mb-2">
+              Email
             </label>
-            <div className="mt-1">
-              <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-              />
-            </div>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              required
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              className="w-full px-4 py-3 bg-gray-950 border border-gray-800 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent transition-all"
+              placeholder="you@example.com"
+            />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="password" className="block text-sm font-semibold text-white mb-2">
               Password
             </label>
-            <div className="mt-1">
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-                required
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-              />
-            </div>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+              required
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              className="w-full px-4 py-3 bg-gray-950 border border-gray-800 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent transition-all"
+              placeholder="••••••••"
+            />
           </div>
 
           {mode === 'signup' && (
             <div>
-              <label htmlFor="confirm-password" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="confirm-password" className="block text-sm font-semibold text-white mb-2">
                 Confirm Password
               </label>
-              <div className="mt-1">
-                <input
-                  id="confirm-password"
-                  name="confirm-password"
-                  type="password"
-                  autoComplete="new-password"
-                  required
-                  value={confirmPassword}
-                  onChange={e => setConfirmPassword(e.target.value)}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                />
-              </div>
+              <input
+                id="confirm-password"
+                name="confirm-password"
+                type="password"
+                autoComplete="new-password"
+                required
+                value={confirmPassword}
+                onChange={e => setConfirmPassword(e.target.value)}
+                className="w-full px-4 py-3 bg-gray-950 border border-gray-800 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent transition-all"
+                placeholder="••••••••"
+              />
             </div>
           )}
 
-          <div>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50"
-            >
-              {isLoading ? <LoadingSpinner /> : (mode === 'login' ? 'Log In' : 'Sign Up')}
-            </button>
-          </div>
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full flex justify-center py-4 px-4 rounded-2xl text-base font-bold bg-gradient-to-r from-white to-gray-200 text-black hover:from-gray-100 hover:to-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black focus:ring-white transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+          >
+            {isLoading ? <LoadingSpinner /> : (mode === 'login' ? 'Log In' : 'Sign Up')}
+          </button>
         </form>
 
-        <div className="mt-6">
+        <div className="mt-8">
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300" />
+              <div className="w-full border-t border-gray-800" />
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">
+              <span className="px-3 bg-gradient-to-r from-gray-900 to-black text-gray-400">
                 {mode === 'login' ? 'Don\'t have an account?' : 'Already have an account?'}
               </span>
             </div>
           </div>
 
-          <div className="mt-6">
-            <button
-              onClick={toggleMode}
-              className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              {mode === 'login' ? 'Sign up now' : 'Log in instead'}
-            </button>
-          </div>
+          <button
+            onClick={toggleMode}
+            className="mt-6 w-full py-3 px-4 border border-gray-800 rounded-2xl text-sm font-semibold text-white hover:bg-gray-900 hover:border-gray-700 transition-all"
+          >
+            {mode === 'login' ? 'Create Account' : 'Log In Instead'}
+          </button>
         </div>
       </div>
     </div>
