@@ -50,7 +50,14 @@ const InteractiveWorkout: React.FC<InteractiveWorkoutProps> = ({ session, librar
                 if (fullEx?.videoStorageKey && !videoSrcMap[fullEx.videoStorageKey]) {
                     const file = await apiService.getVideoFile(fullEx.videoStorageKey);
                     if (file) {
-                        newSrcMap[fullEx.videoStorageKey] = URL.createObjectURL(file);
+                        // Convert File to data URL for iOS compatibility
+                        const dataUrl = await new Promise<string>((resolve, reject) => {
+                            const reader = new FileReader();
+                            reader.onload = () => resolve(reader.result as string);
+                            reader.onerror = () => reject(new Error('Failed to read video file'));
+                            reader.readAsDataURL(file);
+                        });
+                        newSrcMap[fullEx.videoStorageKey] = dataUrl;
                     }
                 }
             }
@@ -59,10 +66,6 @@ const InteractiveWorkout: React.FC<InteractiveWorkoutProps> = ({ session, librar
             }
         };
         loadVideos();
-        
-        return () => {
-            Object.values(videoSrcMap).forEach(URL.revokeObjectURL);
-        };
     }, [day.exercises, libraryExercises]);
 
     const videoSrc = useMemo(() => {
@@ -214,10 +217,10 @@ const InteractiveWorkout: React.FC<InteractiveWorkoutProps> = ({ session, librar
                         src={videoSrc}
                         className="w-full h-full object-contain"
                         controls
-                        autoPlay
                         loop
                         muted
                         playsInline
+                        preload="auto"
                     >
                         Your browser does not support the video tag.
                     </video>

@@ -20,22 +20,27 @@ const ExerciseGalleryItem: React.FC<ExerciseGalleryItemProps> = ({ exercise, onD
   const [tipError, setTipError] = useState<string | null>(null);
 
   useEffect(() => {
-    let objectUrl: string | null = null;
-
     const loadVideo = async () => {
       if (exercise.videoStorageKey) {
         try {
           const file = await apiService.getVideoFile(exercise.videoStorageKey);
           if (file) {
-            objectUrl = URL.createObjectURL(file);
-            let srcWithFragment = objectUrl;
-            if (exercise.startTime !== undefined) {
-              srcWithFragment += `#t=${exercise.startTime}`;
-              if (exercise.endTime !== undefined && exercise.endTime > exercise.startTime) {
-                srcWithFragment += `,${exercise.endTime}`;
+            // Convert File to data URL for iOS compatibility
+            const reader = new FileReader();
+            reader.onload = () => {
+              let srcWithFragment = reader.result as string;
+              if (exercise.startTime !== undefined) {
+                srcWithFragment += `#t=${exercise.startTime}`;
+                if (exercise.endTime !== undefined && exercise.endTime > exercise.startTime) {
+                  srcWithFragment += `,${exercise.endTime}`;
+                }
               }
-            }
-            setVideoSrc(srcWithFragment);
+              setVideoSrc(srcWithFragment);
+            };
+            reader.onerror = () => {
+              console.error(`Failed to read video file for ${exercise.name}`);
+            };
+            reader.readAsDataURL(file);
           }
         } catch (error) {
           console.error(`Failed to load video for ${exercise.name}:`, error);
@@ -46,9 +51,6 @@ const ExerciseGalleryItem: React.FC<ExerciseGalleryItemProps> = ({ exercise, onD
     loadVideo();
 
     return () => {
-      if (objectUrl) {
-        URL.revokeObjectURL(objectUrl);
-      }
       if (observerRef.current) {
         observerRef.current.disconnect();
       }
@@ -56,7 +58,10 @@ const ExerciseGalleryItem: React.FC<ExerciseGalleryItemProps> = ({ exercise, onD
   }, [exercise]);
 
   useEffect(() => {
-    if (videoRef.current && videoSrc) {
+    // Only enable autoplay on non-iOS devices
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+    if (videoRef.current && videoSrc && !isIOS) {
       observerRef.current = new IntersectionObserver(
         ([entry]) => {
           if (entry.isIntersecting) {
@@ -98,9 +103,10 @@ const ExerciseGalleryItem: React.FC<ExerciseGalleryItemProps> = ({ exercise, onD
         {videoSrc ? (
           <video
             ref={videoRef}
-            key={videoSrc} 
+            key={videoSrc}
             src={videoSrc}
             className="w-full h-full object-contain"
+            controls
             loop
             muted
             playsInline
