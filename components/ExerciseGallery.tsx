@@ -2,6 +2,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Exercise } from '../types';
 import * as apiService from '../services/apiService';
+import * as videoStorage from '../services/videoStorage';
 import { getQuickExerciseTip } from '../services/geminiService';
 import { TrashIcon, SparklesIcon } from './icons';
 import LoadingSpinner from './LoadingSpinner';
@@ -14,6 +15,8 @@ interface ExerciseGalleryItemProps {
 const ExerciseGalleryItem: React.FC<ExerciseGalleryItemProps> = ({ exercise, onDeleteExercise }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoSrc, setVideoSrc] = useState<string | null>(null);
+  const [isVideoLoading, setIsVideoLoading] = useState(true);
+  const [videoError, setVideoError] = useState<string | null>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const [tip, setTip] = useState<string | null>(null);
   const [isTipLoading, setIsTipLoading] = useState(false);
@@ -22,23 +25,50 @@ const ExerciseGalleryItem: React.FC<ExerciseGalleryItemProps> = ({ exercise, onD
   useEffect(() => {
     const loadVideo = async () => {
       if (exercise.videoStorageKey) {
+        setIsVideoLoading(true);
+        setVideoError(null);
         try {
-          const file = await apiService.getVideoFile(exercise.videoStorageKey);
-          if (file) {
-            // Convert File to data URL for iOS compatibility
-            const reader = new FileReader();
-            reader.onload = () => {
-              // Don't add fragment identifiers - they don't work with data URLs
-              setVideoSrc(reader.result as string);
-            };
-            reader.onerror = () => {
-              console.error(`Failed to read video file for ${exercise.name}`);
-            };
-            reader.readAsDataURL(file);
+          // First try to get native file path (for iOS/Android)
+          const nativePath = await videoStorage.getVideoPath(exercise.videoStorageKey);
+
+          if (nativePath) {
+            // Use the native file path directly
+            console.log(`Using native file path for ${exercise.name}: ${nativePath}`);
+            setVideoSrc(nativePath);
+            setIsVideoLoading(false);
+          } else {
+            // Fallback to data URL for web
+            const file = await apiService.getVideoFile(exercise.videoStorageKey);
+            if (file) {
+              console.log(`Loading video for ${exercise.name}, file size: ${file.size} bytes`);
+              // Convert File to data URL for web compatibility
+              const reader = new FileReader();
+              reader.onload = () => {
+                const dataUrl = reader.result as string;
+                console.log(`Video data URL created for ${exercise.name}, length: ${dataUrl.length}`);
+                setVideoSrc(dataUrl);
+                setIsVideoLoading(false);
+              };
+              reader.onerror = (e) => {
+                console.error(`Failed to read video file for ${exercise.name}:`, e);
+                setVideoError('Failed to load video');
+                setIsVideoLoading(false);
+              };
+              reader.readAsDataURL(file);
+            } else {
+              console.error(`No file found for ${exercise.name}`);
+              setVideoError('Video file not found');
+              setIsVideoLoading(false);
+            }
           }
         } catch (error) {
           console.error(`Failed to load video for ${exercise.name}:`, error);
+          setVideoError('Failed to load video');
+          setIsVideoLoading(false);
         }
+      } else {
+        setVideoError('No video available');
+        setIsVideoLoading(false);
       }
     };
 
@@ -117,10 +147,27 @@ const ExerciseGalleryItem: React.FC<ExerciseGalleryItemProps> = ({ exercise, onD
   }
 
 
+  const handleVideoError = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
+    console.error(`Video playback error for ${exercise.name}:`, e);
+    setVideoError('Video playback failed');
+  };
+
   return (
     <div className="bg-gradient-to-br from-gray-900 to-black rounded-2xl overflow-hidden flex flex-col border border-gray-800 hover:border-gray-700 transition-all">
       <div className="w-full aspect-[9/16] bg-black flex items-center justify-center relative">
-        {videoSrc ? (
+        {videoError ? (
+          <div className="w-full h-full flex flex-col items-center justify-center p-4">
+            <p className="text-red-400 text-sm mb-2">⚠️ {videoError}</p>
+            <p className="text-gray-500 text-xs">Try re-uploading the video</p>
+          </div>
+        ) : isVideoLoading ? (
+          <div className="w-full h-full flex items-center justify-center">
+            <div className="text-center">
+              <LoadingSpinner />
+              <p className="text-gray-500 text-xs mt-2">Loading video...</p>
+            </div>
+          </div>
+        ) : videoSrc ? (
           <video
             ref={videoRef}
             key={videoSrc}
@@ -131,12 +178,14 @@ const ExerciseGalleryItem: React.FC<ExerciseGalleryItemProps> = ({ exercise, onD
             muted
             playsInline
             preload="metadata"
+            onError={handleVideoError}
+            onLoadedData={() => console.log(`Video loaded successfully: ${exercise.name}`)}
           >
             Your browser does not support the video tag.
           </video>
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <p className="text-gray-500 text-sm">Loading...</p>
+            <p className="text-gray-500 text-sm">No video available</p>
           </div>
         )}
       </div>

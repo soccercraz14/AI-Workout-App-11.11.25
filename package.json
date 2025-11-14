@@ -13,6 +13,7 @@
   "dependencies": {
     "@capacitor/cli": "^7.4.4",
     "@capacitor/core": "^7.4.4",
+    "@capacitor/filesystem": "^7.1.4",
     "@capacitor/ios": "^7.4.4",
     "@google/genai": "^1.5.1",
     "react": "^19.1.0",

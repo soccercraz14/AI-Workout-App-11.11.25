@@ -417,11 +417,11 @@ const App: React.FC = () => {
       <header className="bg-gradient-to-b from-gray-950 to-black border-b border-gray-900 sticky top-0 z-40 backdrop-blur-xl bg-opacity-90" style={{paddingTop: 'env(safe-area-inset-top)'}}>
         <nav className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-between h-14">
-            <div className="flex items-center space-x-3">
-              <div className="bg-gradient-to-br from-white to-gray-400 p-2 rounded-xl">
-                <SparklesIcon className="h-5 w-5 text-black" />
+            <div className="flex items-center space-x-2 ml-16">
+              <div className="bg-gradient-to-br from-white to-gray-400 p-1.5 rounded-lg">
+                <SparklesIcon className="h-4 w-4 text-black" />
               </div>
-              <h1 className="text-lg font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+              <h1 className="text-sm font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
                 AI Workout
               </h1>
             </div>
