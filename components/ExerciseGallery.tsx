@@ -56,7 +56,10 @@ const ExerciseGalleryItem: React.FC<ExerciseGalleryItemProps> = ({ exercise, onD
   }, [exercise]);
 
   useEffect(() => {
-    if (videoRef.current && videoSrc) {
+    // Only enable autoplay on non-iOS devices
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+    if (videoRef.current && videoSrc && !isIOS) {
       observerRef.current = new IntersectionObserver(
         ([entry]) => {
           if (entry.isIntersecting) {
@@ -98,9 +101,10 @@ const ExerciseGalleryItem: React.FC<ExerciseGalleryItemProps> = ({ exercise, onD
         {videoSrc ? (
           <video
             ref={videoRef}
-            key={videoSrc} 
+            key={videoSrc}
             src={videoSrc}
             className="w-full h-full object-contain"
+            controls
             loop
             muted
             playsInline

@@ -214,10 +214,10 @@ const InteractiveWorkout: React.FC<InteractiveWorkoutProps> = ({ session, librar
                         src={videoSrc}
                         className="w-full h-full object-contain"
                         controls
-                        autoPlay
                         loop
                         muted
                         playsInline
+                        preload="auto"
                     >
                         Your browser does not support the video tag.
                     </video>
