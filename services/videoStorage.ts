@@ -2,8 +2,9 @@ import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 
 const DB_NAME = 'AIWorkoutVideoDB';
-const DB_VERSION = 1;
+const DB_VERSION = 2; // Incremented to add thumbnails store
 const VIDEO_STORE_NAME = 'videos';
+const THUMBNAIL_STORE_NAME = 'thumbnails';
 
 let dbPromise: Promise<IDBDatabase> | null = null;
 
@@ -36,6 +37,9 @@ const initDB = (): Promise<IDBDatabase> => {
       const db = (event.target as IDBOpenDBRequest).result;
       if (!db.objectStoreNames.contains(VIDEO_STORE_NAME)) {
         db.createObjectStore(VIDEO_STORE_NAME);
+      }
+      if (!db.objectStoreNames.contains(THUMBNAIL_STORE_NAME)) {
+        db.createObjectStore(THUMBNAIL_STORE_NAME);
       }
     };
   });
@@ -133,6 +137,85 @@ export const getVideo = async (key: string): Promise<File | null> => {
     const db = await initDB();
     const transaction = db.transaction(VIDEO_STORE_NAME, 'readonly');
     const store = transaction.objectStore(VIDEO_STORE_NAME);
+    const request = store.get(key);
+    return new Promise((resolve, reject) => {
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => reject(request.error);
+    });
+  }
+};
+
+/**
+ * Save a thumbnail (Blob) with a specific key
+ */
+export const saveThumbnail = async (key: string, thumbnail: Blob): Promise<void> => {
+  if (isNativePlatform) {
+    // Save to native filesystem
+    const reader = new FileReader();
+    const base64Data = await new Promise<string>((resolve, reject) => {
+      reader.onload = () => {
+        const result = reader.result as string;
+        const base64 = result.split(',')[1];
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(thumbnail);
+    });
+
+    const fileName = `${key}.jpg`;
+    await Filesystem.writeFile({
+      path: `thumbnails/${fileName}`,
+      data: base64Data,
+      directory: Directory.Data,
+      recursive: true,
+    });
+    console.log(`Thumbnail saved to filesystem: thumbnails/${fileName}`);
+  } else {
+    // Save to IndexedDB for web
+    const db = await initDB();
+    const transaction = db.transaction(THUMBNAIL_STORE_NAME, 'readwrite');
+    const store = transaction.objectStore(THUMBNAIL_STORE_NAME);
+    store.put(thumbnail, key);
+    return new Promise((resolve, reject) => {
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+    });
+  }
+};
+
+/**
+ * Get thumbnail path (for native platforms) or Blob (for web)
+ */
+export const getThumbnailPath = async (key: string): Promise<string | null> => {
+  if (isNativePlatform) {
+    try {
+      const fileName = `${key}.jpg`;
+      const result = await Filesystem.getUri({
+        path: `thumbnails/${fileName}`,
+        directory: Directory.Data,
+      });
+      return Capacitor.convertFileSrc(result.uri);
+    } catch (error) {
+      console.error(`Failed to get thumbnail path for ${key}:`, error);
+      return null;
+    }
+  } else {
+    // For web, return null - use getThumbnail() instead
+    return null;
+  }
+};
+
+/**
+ * Get thumbnail Blob (for web platforms)
+ */
+export const getThumbnail = async (key: string): Promise<Blob | null> => {
+  if (isNativePlatform) {
+    console.warn('getThumbnail() called on native platform - use getThumbnailPath() instead');
+    return null;
+  } else {
+    const db = await initDB();
+    const transaction = db.transaction(THUMBNAIL_STORE_NAME, 'readonly');
+    const store = transaction.objectStore(THUMBNAIL_STORE_NAME);
     const request = store.get(key);
     return new Promise((resolve, reject) => {
       request.onsuccess = () => resolve(request.result || null);

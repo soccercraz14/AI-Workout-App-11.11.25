@@ -13,6 +13,8 @@ import InteractiveWorkout from './components/InteractiveWorkout';
 import DataBackupRestore from './components/DataBackupRestore';
 import { generateWorkoutPlanWithGemini, analyzeVideoAndExtractExercises } from './services/geminiService';
 import * as apiService from './services/apiService';
+import * as videoStorage from './services/videoStorage';
+import { generateVideoHash, generateThumbnail, compressVideo } from './services/videoUtils';
 import { SparklesIcon, VideoCameraIcon, ArrowRightOnRectangleIcon, HomeIcon } from './components/icons';
 
 export interface VideoAnalysisPayload {
@@ -161,10 +163,33 @@ const App: React.FC = () => {
 
     for (let i = 0; i < videosToAnalyze.length; i++) {
       const { file: videoFile } = videosToAnalyze[i];
-      setStatusMessage(`Analyzing video ${i + 1} of ${videosToAnalyze.length}: ${videoFile.name}`);
+      setStatusMessage(`Processing video ${i + 1} of ${videosToAnalyze.length}: ${videoFile.name}`);
+
       try {
-        const videoStorageKey = await apiService.saveVideoFile(videoFile);
-        const extractedData = await analyzeVideoAndExtractExercises(videoFile, useProModel);
+        // Generate video hash for caching
+        setStatusMessage(`Generating hash for ${videoFile.name}...`);
+        const videoHash = await generateVideoHash(videoFile);
+
+        // Compress video (optional, currently returns original if small enough)
+        setStatusMessage(`Preparing ${videoFile.name}...`);
+        const processedVideo = await compressVideo(videoFile);
+
+        // Save video to storage
+        const videoStorageKey = await apiService.saveVideoFile(processedVideo);
+
+        // Generate and save thumbnail
+        setStatusMessage(`Generating thumbnail for ${videoFile.name}...`);
+        try {
+          const thumbnail = await generateThumbnail(processedVideo);
+          await videoStorage.saveThumbnail(videoStorageKey, thumbnail);
+        } catch (thumbError) {
+          console.warn(`Failed to generate thumbnail for ${videoFile.name}:`, thumbError);
+          // Continue even if thumbnail fails
+        }
+
+        // Analyze video with AI (with caching and retry)
+        setStatusMessage(`Analyzing video ${i + 1} of ${videosToAnalyze.length}: ${videoFile.name}`);
+        const extractedData = await analyzeVideoAndExtractExercises(processedVideo, useProModel, videoHash);
 
         if (extractedData.length > 0) {
           const videoFileNameForId = videoFile.name.replace(/[^a-zA-Z0-9]/g, '') || 'video';
@@ -173,8 +198,13 @@ const App: React.FC = () => {
             name: data.name,
             description: data.description,
             videoStorageKey: videoStorageKey,
+            thumbnailStorageKey: videoStorageKey, // Use same key for thumbnail
             startTime: data.startTime,
             endTime: data.endTime,
+            muscleGroups: data.muscleGroups,
+            equipment: data.equipment,
+            difficulty: data.difficulty,
+            videoHash: videoHash,
           }));
           allNewlyExtractedExercises.push(...exercisesWithDetails);
         }
