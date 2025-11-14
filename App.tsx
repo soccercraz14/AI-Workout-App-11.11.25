@@ -446,15 +446,7 @@ const App: React.FC = () => {
       {/* Top Header */}
       <header className="bg-gradient-to-b from-gray-950 to-black border-b border-gray-900 sticky top-0 z-40 backdrop-blur-xl bg-opacity-90" style={{paddingTop: 'env(safe-area-inset-top)'}}>
         <nav className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="flex items-center justify-between h-14">
-            <div className="flex items-center space-x-2 ml-16">
-              <div className="bg-gradient-to-br from-white to-gray-400 p-1.5 rounded-lg">
-                <SparklesIcon className="h-4 w-4 text-black" />
-              </div>
-              <h1 className="text-sm font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
-                AI Workout
-              </h1>
-            </div>
+          <div className="flex items-center justify-end h-14">
             <button
                 onClick={handleLogout}
                 className="p-2 text-gray-400 hover:text-white hover:bg-gray-900 rounded-xl transition-all"
