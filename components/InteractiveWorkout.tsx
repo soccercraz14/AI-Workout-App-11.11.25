@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { WorkoutSession, Exercise, PlannedExercise } from '../types';
 import * as apiService from '../services/apiService';
+import * as videoStorage from '../services/videoStorage';
 import { transcribeAudio } from '../services/geminiService';
 import { MicrophoneIcon } from './icons';
 import LoadingSpinner from './LoadingSpinner';
@@ -50,20 +51,30 @@ const InteractiveWorkout: React.FC<InteractiveWorkoutProps> = ({ session, librar
             for (const plannedEx of day.exercises) {
                 const fullEx = libraryExercises.find(e => e.id === plannedEx.originalExerciseId);
                 if (fullEx?.videoStorageKey && !loadedKeysRef.current.has(fullEx.videoStorageKey)) {
-                    const file = await apiService.getVideoFile(fullEx.videoStorageKey);
-                    if (file) {
-                        try {
-                            // Convert File to data URL for iOS compatibility
-                            const dataUrl = await new Promise<string>((resolve, reject) => {
-                                const reader = new FileReader();
-                                reader.onload = () => resolve(reader.result as string);
-                                reader.onerror = () => reject(new Error('Failed to read video file'));
-                                reader.readAsDataURL(file);
-                            });
-                            newSrcMap[fullEx.videoStorageKey] = dataUrl;
-                            loadedKeysRef.current.add(fullEx.videoStorageKey);
-                        } catch (error) {
-                            console.error(`Failed to convert video to data URL for ${fullEx.name}:`, error);
+                    // First try to get native file path (for iOS/Android)
+                    const nativePath = await videoStorage.getVideoPath(fullEx.videoStorageKey);
+
+                    if (nativePath) {
+                        // Use the native file path directly
+                        newSrcMap[fullEx.videoStorageKey] = nativePath;
+                        loadedKeysRef.current.add(fullEx.videoStorageKey);
+                    } else {
+                        // Fallback to data URL for web
+                        const file = await apiService.getVideoFile(fullEx.videoStorageKey);
+                        if (file) {
+                            try {
+                                // Convert File to data URL for web compatibility
+                                const dataUrl = await new Promise<string>((resolve, reject) => {
+                                    const reader = new FileReader();
+                                    reader.onload = () => resolve(reader.result as string);
+                                    reader.onerror = () => reject(new Error('Failed to read video file'));
+                                    reader.readAsDataURL(file);
+                                });
+                                newSrcMap[fullEx.videoStorageKey] = dataUrl;
+                                loadedKeysRef.current.add(fullEx.videoStorageKey);
+                            } catch (error) {
+                                console.error(`Failed to convert video to data URL for ${fullEx.name}:`, error);
+                            }
                         }
                     }
                 }

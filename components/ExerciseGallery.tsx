@@ -2,6 +2,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Exercise } from '../types';
 import * as apiService from '../services/apiService';
+import * as videoStorage from '../services/videoStorage';
 import { getQuickExerciseTip } from '../services/geminiService';
 import { TrashIcon, SparklesIcon } from './icons';
 import LoadingSpinner from './LoadingSpinner';
@@ -27,27 +28,38 @@ const ExerciseGalleryItem: React.FC<ExerciseGalleryItemProps> = ({ exercise, onD
         setIsVideoLoading(true);
         setVideoError(null);
         try {
-          const file = await apiService.getVideoFile(exercise.videoStorageKey);
-          if (file) {
-            console.log(`Loading video for ${exercise.name}, file size: ${file.size} bytes`);
-            // Convert File to data URL for iOS compatibility
-            const reader = new FileReader();
-            reader.onload = () => {
-              const dataUrl = reader.result as string;
-              console.log(`Video data URL created for ${exercise.name}, length: ${dataUrl.length}`);
-              setVideoSrc(dataUrl);
-              setIsVideoLoading(false);
-            };
-            reader.onerror = (e) => {
-              console.error(`Failed to read video file for ${exercise.name}:`, e);
-              setVideoError('Failed to load video');
-              setIsVideoLoading(false);
-            };
-            reader.readAsDataURL(file);
-          } else {
-            console.error(`No file found for ${exercise.name}`);
-            setVideoError('Video file not found');
+          // First try to get native file path (for iOS/Android)
+          const nativePath = await videoStorage.getVideoPath(exercise.videoStorageKey);
+
+          if (nativePath) {
+            // Use the native file path directly
+            console.log(`Using native file path for ${exercise.name}: ${nativePath}`);
+            setVideoSrc(nativePath);
             setIsVideoLoading(false);
+          } else {
+            // Fallback to data URL for web
+            const file = await apiService.getVideoFile(exercise.videoStorageKey);
+            if (file) {
+              console.log(`Loading video for ${exercise.name}, file size: ${file.size} bytes`);
+              // Convert File to data URL for web compatibility
+              const reader = new FileReader();
+              reader.onload = () => {
+                const dataUrl = reader.result as string;
+                console.log(`Video data URL created for ${exercise.name}, length: ${dataUrl.length}`);
+                setVideoSrc(dataUrl);
+                setIsVideoLoading(false);
+              };
+              reader.onerror = (e) => {
+                console.error(`Failed to read video file for ${exercise.name}:`, e);
+                setVideoError('Failed to load video');
+                setIsVideoLoading(false);
+              };
+              reader.readAsDataURL(file);
+            } else {
+              console.error(`No file found for ${exercise.name}`);
+              setVideoError('Video file not found');
+              setIsVideoLoading(false);
+            }
           }
         } catch (error) {
           console.error(`Failed to load video for ${exercise.name}:`, error);
