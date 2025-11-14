@@ -26,6 +26,8 @@ const InteractiveWorkout: React.FC<InteractiveWorkoutProps> = ({ session, librar
     const [restTimeLeft, setRestTimeLeft] = useState(0);
 
     const [videoSrcMap, setVideoSrcMap] = useState<Record<string, string>>({});
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const loadedKeysRef = useRef<Set<string>>(new Set());
 
     // Voice Note State
     const [isVoiceNoteModalOpen, setIsVoiceNoteModalOpen] = useState(false);
@@ -37,7 +39,7 @@ const InteractiveWorkout: React.FC<InteractiveWorkoutProps> = ({ session, librar
     const audioChunksRef = useRef<Blob[]>([]);
 
     const currentPlannedExercise = day.exercises[currentExerciseIndex];
-    const fullExerciseDetails = useMemo(() => 
+    const fullExerciseDetails = useMemo(() =>
         libraryExercises.find(ex => ex.id === currentPlannedExercise.originalExerciseId),
         [libraryExercises, currentPlannedExercise]
     );
@@ -47,17 +49,22 @@ const InteractiveWorkout: React.FC<InteractiveWorkoutProps> = ({ session, librar
             const newSrcMap: Record<string, string> = {};
             for (const plannedEx of day.exercises) {
                 const fullEx = libraryExercises.find(e => e.id === plannedEx.originalExerciseId);
-                if (fullEx?.videoStorageKey && !videoSrcMap[fullEx.videoStorageKey]) {
+                if (fullEx?.videoStorageKey && !loadedKeysRef.current.has(fullEx.videoStorageKey)) {
                     const file = await apiService.getVideoFile(fullEx.videoStorageKey);
                     if (file) {
-                        // Convert File to data URL for iOS compatibility
-                        const dataUrl = await new Promise<string>((resolve, reject) => {
-                            const reader = new FileReader();
-                            reader.onload = () => resolve(reader.result as string);
-                            reader.onerror = () => reject(new Error('Failed to read video file'));
-                            reader.readAsDataURL(file);
-                        });
-                        newSrcMap[fullEx.videoStorageKey] = dataUrl;
+                        try {
+                            // Convert File to data URL for iOS compatibility
+                            const dataUrl = await new Promise<string>((resolve, reject) => {
+                                const reader = new FileReader();
+                                reader.onload = () => resolve(reader.result as string);
+                                reader.onerror = () => reject(new Error('Failed to read video file'));
+                                reader.readAsDataURL(file);
+                            });
+                            newSrcMap[fullEx.videoStorageKey] = dataUrl;
+                            loadedKeysRef.current.add(fullEx.videoStorageKey);
+                        } catch (error) {
+                            console.error(`Failed to convert video to data URL for ${fullEx.name}:`, error);
+                        }
                     }
                 }
             }
@@ -72,16 +79,35 @@ const InteractiveWorkout: React.FC<InteractiveWorkoutProps> = ({ session, librar
         if (!fullExerciseDetails?.videoStorageKey) return null;
         const baseUrl = videoSrcMap[fullExerciseDetails.videoStorageKey];
         if (!baseUrl) return null;
-        
-        let finalSrc = baseUrl;
-        if (fullExerciseDetails.startTime !== undefined) {
-            finalSrc += `#t=${fullExerciseDetails.startTime}`;
-            if (fullExerciseDetails.endTime !== undefined && fullExerciseDetails.endTime > fullExerciseDetails.startTime) {
-                finalSrc += `,${fullExerciseDetails.endTime}`;
-            }
-        }
-        return finalSrc;
+        // Don't add fragment identifiers - they don't work with data URLs
+        return baseUrl;
     }, [fullExerciseDetails, videoSrcMap]);
+
+    // Handle video time range (start/end time) after metadata loads
+    useEffect(() => {
+        const video = videoRef.current;
+        if (!video || !videoSrc || !fullExerciseDetails) return;
+
+        const handleLoadedMetadata = () => {
+            if (fullExerciseDetails.startTime !== undefined) {
+                video.currentTime = fullExerciseDetails.startTime;
+            }
+        };
+
+        const handleTimeUpdate = () => {
+            if (fullExerciseDetails.endTime !== undefined && video.currentTime >= fullExerciseDetails.endTime) {
+                video.currentTime = fullExerciseDetails.startTime || 0;
+            }
+        };
+
+        video.addEventListener('loadedmetadata', handleLoadedMetadata);
+        video.addEventListener('timeupdate', handleTimeUpdate);
+
+        return () => {
+            video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+            video.removeEventListener('timeupdate', handleTimeUpdate);
+        };
+    }, [videoSrc, fullExerciseDetails]);
 
     useEffect(() => {
         if (isResting && restTimeLeft > 0) {
@@ -213,6 +239,7 @@ const InteractiveWorkout: React.FC<InteractiveWorkoutProps> = ({ session, librar
             <div className="w-full aspect-video bg-black rounded-lg overflow-hidden shadow-lg mb-4">
                  {videoSrc ? (
                     <video
+                        ref={videoRef}
                         key={videoSrc}
                         src={videoSrc}
                         className="w-full h-full object-contain"
