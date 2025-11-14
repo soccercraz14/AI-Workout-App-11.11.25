@@ -28,14 +28,8 @@ const ExerciseGalleryItem: React.FC<ExerciseGalleryItemProps> = ({ exercise, onD
             // Convert File to data URL for iOS compatibility
             const reader = new FileReader();
             reader.onload = () => {
-              let srcWithFragment = reader.result as string;
-              if (exercise.startTime !== undefined) {
-                srcWithFragment += `#t=${exercise.startTime}`;
-                if (exercise.endTime !== undefined && exercise.endTime > exercise.startTime) {
-                  srcWithFragment += `,${exercise.endTime}`;
-                }
-              }
-              setVideoSrc(srcWithFragment);
+              // Don't add fragment identifiers - they don't work with data URLs
+              setVideoSrc(reader.result as string);
             };
             reader.onerror = () => {
               console.error(`Failed to read video file for ${exercise.name}`);
@@ -56,6 +50,32 @@ const ExerciseGalleryItem: React.FC<ExerciseGalleryItemProps> = ({ exercise, onD
       }
     };
   }, [exercise]);
+
+  // Handle video time range (start/end time) after metadata loads
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !videoSrc) return;
+
+    const handleLoadedMetadata = () => {
+      if (exercise.startTime !== undefined) {
+        video.currentTime = exercise.startTime;
+      }
+    };
+
+    const handleTimeUpdate = () => {
+      if (exercise.endTime !== undefined && video.currentTime >= exercise.endTime) {
+        video.currentTime = exercise.startTime || 0;
+      }
+    };
+
+    video.addEventListener('loadedmetadata', handleLoadedMetadata);
+    video.addEventListener('timeupdate', handleTimeUpdate);
+
+    return () => {
+      video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      video.removeEventListener('timeupdate', handleTimeUpdate);
+    };
+  }, [videoSrc, exercise.startTime, exercise.endTime]);
 
   useEffect(() => {
     // Only enable autoplay on non-iOS devices

@@ -26,6 +26,7 @@ const InteractiveWorkout: React.FC<InteractiveWorkoutProps> = ({ session, librar
     const [restTimeLeft, setRestTimeLeft] = useState(0);
 
     const [videoSrcMap, setVideoSrcMap] = useState<Record<string, string>>({});
+    const videoRef = useRef<HTMLVideoElement>(null);
 
     // Voice Note State
     const [isVoiceNoteModalOpen, setIsVoiceNoteModalOpen] = useState(false);
@@ -72,16 +73,35 @@ const InteractiveWorkout: React.FC<InteractiveWorkoutProps> = ({ session, librar
         if (!fullExerciseDetails?.videoStorageKey) return null;
         const baseUrl = videoSrcMap[fullExerciseDetails.videoStorageKey];
         if (!baseUrl) return null;
-        
-        let finalSrc = baseUrl;
-        if (fullExerciseDetails.startTime !== undefined) {
-            finalSrc += `#t=${fullExerciseDetails.startTime}`;
-            if (fullExerciseDetails.endTime !== undefined && fullExerciseDetails.endTime > fullExerciseDetails.startTime) {
-                finalSrc += `,${fullExerciseDetails.endTime}`;
-            }
-        }
-        return finalSrc;
+        // Don't add fragment identifiers - they don't work with data URLs
+        return baseUrl;
     }, [fullExerciseDetails, videoSrcMap]);
+
+    // Handle video time range (start/end time) after metadata loads
+    useEffect(() => {
+        const video = videoRef.current;
+        if (!video || !videoSrc || !fullExerciseDetails) return;
+
+        const handleLoadedMetadata = () => {
+            if (fullExerciseDetails.startTime !== undefined) {
+                video.currentTime = fullExerciseDetails.startTime;
+            }
+        };
+
+        const handleTimeUpdate = () => {
+            if (fullExerciseDetails.endTime !== undefined && video.currentTime >= fullExerciseDetails.endTime) {
+                video.currentTime = fullExerciseDetails.startTime || 0;
+            }
+        };
+
+        video.addEventListener('loadedmetadata', handleLoadedMetadata);
+        video.addEventListener('timeupdate', handleTimeUpdate);
+
+        return () => {
+            video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+            video.removeEventListener('timeupdate', handleTimeUpdate);
+        };
+    }, [videoSrc, fullExerciseDetails]);
 
     useEffect(() => {
         if (isResting && restTimeLeft > 0) {
@@ -213,6 +233,7 @@ const InteractiveWorkout: React.FC<InteractiveWorkoutProps> = ({ session, librar
             <div className="w-full aspect-video bg-black rounded-lg overflow-hidden shadow-lg mb-4">
                  {videoSrc ? (
                     <video
+                        ref={videoRef}
                         key={videoSrc}
                         src={videoSrc}
                         className="w-full h-full object-contain"
