@@ -27,6 +27,7 @@ const InteractiveWorkout: React.FC<InteractiveWorkoutProps> = ({ session, librar
 
     const [videoSrcMap, setVideoSrcMap] = useState<Record<string, string>>({});
     const videoRef = useRef<HTMLVideoElement>(null);
+    const loadedKeysRef = useRef<Set<string>>(new Set());
 
     // Voice Note State
     const [isVoiceNoteModalOpen, setIsVoiceNoteModalOpen] = useState(false);
@@ -38,7 +39,7 @@ const InteractiveWorkout: React.FC<InteractiveWorkoutProps> = ({ session, librar
     const audioChunksRef = useRef<Blob[]>([]);
 
     const currentPlannedExercise = day.exercises[currentExerciseIndex];
-    const fullExerciseDetails = useMemo(() => 
+    const fullExerciseDetails = useMemo(() =>
         libraryExercises.find(ex => ex.id === currentPlannedExercise.originalExerciseId),
         [libraryExercises, currentPlannedExercise]
     );
@@ -48,17 +49,22 @@ const InteractiveWorkout: React.FC<InteractiveWorkoutProps> = ({ session, librar
             const newSrcMap: Record<string, string> = {};
             for (const plannedEx of day.exercises) {
                 const fullEx = libraryExercises.find(e => e.id === plannedEx.originalExerciseId);
-                if (fullEx?.videoStorageKey && !videoSrcMap[fullEx.videoStorageKey]) {
+                if (fullEx?.videoStorageKey && !loadedKeysRef.current.has(fullEx.videoStorageKey)) {
                     const file = await apiService.getVideoFile(fullEx.videoStorageKey);
                     if (file) {
-                        // Convert File to data URL for iOS compatibility
-                        const dataUrl = await new Promise<string>((resolve, reject) => {
-                            const reader = new FileReader();
-                            reader.onload = () => resolve(reader.result as string);
-                            reader.onerror = () => reject(new Error('Failed to read video file'));
-                            reader.readAsDataURL(file);
-                        });
-                        newSrcMap[fullEx.videoStorageKey] = dataUrl;
+                        try {
+                            // Convert File to data URL for iOS compatibility
+                            const dataUrl = await new Promise<string>((resolve, reject) => {
+                                const reader = new FileReader();
+                                reader.onload = () => resolve(reader.result as string);
+                                reader.onerror = () => reject(new Error('Failed to read video file'));
+                                reader.readAsDataURL(file);
+                            });
+                            newSrcMap[fullEx.videoStorageKey] = dataUrl;
+                            loadedKeysRef.current.add(fullEx.videoStorageKey);
+                        } catch (error) {
+                            console.error(`Failed to convert video to data URL for ${fullEx.name}:`, error);
+                        }
                     }
                 }
             }
